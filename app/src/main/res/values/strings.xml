@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SLBLE</string>
+    <string name = "ble_not_supported">BLE not supported</string>
+    <string name = "error_get_ble">Get BLE service error</string>
+    <string name = "unknown_device">Unknown_device</string>
+    <string name = "bonding">Bonding... </string>
+    <string name = "bond_failed">Bond failed </string>
+    <string name = "connected">Connected</string>
+    <string name = "disconnected">Disconnected</string>
+    <string name = "auto_connecting">Auto connecting</string>
+    <string name = "re_connecting">Re-connecting... </string>
+    <string name = "connecting">Connecting... </string>
+    <string name = "connect_cancelled">Connect cancelled</string>
+    <string name = "re_scanning">Re-scanning...</string>
+    <string name = "device_not_found">Device not found</string>
+    <string name = "scan_finished">Scan finished</string>
+    <string name = "no_data">No data</string>
+    <string name = "label_device_address">Address</string>
+    <string name = "label_state">State</string>
+    <string name = "label_data">Data</string>
+    <string name = "label_password">Pwd</string>
+    <string name = "label_aes">AES</string>
+    <string name = "label_rssi">Rssi</string>
+    <string name = "unknown_service">Unknown service</string>
+    <string name = "unknown_characteristic">Unknown characteristic</string>
+
+    <string name = "registering">Registering...</string>
+    <string name = "register_success">Register success</string>
+    <string name = "logging_in">Logging in...</string>
+    <string name = "login_success">Login success</string>
+
+    <string name="ok">確定</string>
+	<string name="cancel">取消</string>
+
+    <string name = "pref_key_mobile_number">pref_key_mobile_number</string>
+    <string name = "pref_key_auto_wake_up">pref_key_auto_wake_up</string>
+    <string name = "pref_key_auto_connect">pref_key_auto_connect</string>
+    <string name = "pref_key_auto_scroll">pref_key_auto_scroll</string>
+    <string name = "pref_key_slave_tag">pref_key_slave_tag</string>
+    <string name = "pref_key_user_password">pref_key_user_password</string>
+    <string name = "pref_key_key_less">pref_key_key_less</string>
+    <string name = "pref_key_key_less_arm">pref_key_key_less_arm</string>
+    <string name = "pref_key_key_less_disarm">pref_key_key_less_disarm</string>
+    <string name = "pref_key_key_less_tuning">pref_key_key_less_tuning</string>
+    <string name = "pref_key_tx_power">pref_key_tx_power</string>
+    <string name = "pref_key_test_mode">pref_key_test_mode</string>
+    <string name = "pref_key_ping_no_ack">pref_key_ping_no_ack</string>
+    <string name = "pref_key_format_error">pref_key_format_error</string>
+    <string name = "pref_key_thermal_test">pref_key_thermal_test</string>
+
+    <string name = "pref_title_mobile_number">Mobile number</string>
+    <string name = "pref_title_auto_wake_up">Auto wake up</string>
+    <string name = "pref_title_auto_connect">Auto connect</string>
+    <string name = "pref_title_auto_scroll">Auto scroll</string>
+    <string name = "pref_title_slave_tag">Slave tag</string>
+    <string name = "pref_title_user_password">User password</string>
+    <string name = "pref_title_change_password">Change password</string>
+    <string name = "pref_title_key_less">Key less</string>
+    <string name = "pref_title_key_less_arm">Arm</string>
+    <string name = "pref_title_key_less_disarm">Disarm</string>
+    <string name = "pref_title_key_less_tuning">Tuning</string>
+    <string name = "pref_title_tx_power">Tx power</string>
+    <string name = "pref_title_test_mode">Test mode</string>
+    <string name = "pref_title_ping_no_ack">Ping no ack</string>
+    <string name = "pref_title_format_error">Format error</string>
+    <string name = "pref_title_thermal_test">Thermal test</string>
+
+    <string name="day">日</string>
+	<string name="days">天</string>
+	<string name="hour">時</string>
+    <string name="minute">分</string>
+</resources>

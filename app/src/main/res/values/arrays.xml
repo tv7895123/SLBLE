@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string-array name="tx_power_titles">
+        <item name="plus_7_dbm">7 dBm</item>
+        <item name="plus_4_dbm">4 dBm</item>
+        <item name="plus_2_dbm">2 dBm</item>
+        <item name="plus_0_dbm">0 dBm</item>
+        <item name="minus_5_dbm">-5 dBm</item>
+        <item name="minus_10_dbm">-10 dBm</item>
+        <item name="minus_15_dbm">-15 dBm</item>
+        <item name="minus_17_dbm">-17 dBm</item>
+    </string-array>
+    
+    <string-array name="tx_power_values">
+        <item name="plus_7_dbm">7</item>
+        <item name="plus_4_dbm">6</item>
+        <item name="plus_2_dbm">5</item>
+        <item name="plus_0_dbm">4</item>
+        <item name="minus_5_dbm">3</item>
+        <item name="minus_10_dbm">2</item>
+        <item name="minus_15_dbm">1</item>
+        <item name="minus_17_dbm">0</item>
+    </string-array>
+
+</resources>

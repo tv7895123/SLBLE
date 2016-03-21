@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--Login-->
+    <item android:state_activated="true" android:state_selected="true" android:drawable="@drawable/circle_green"/>
+    <item android:state_activated="true" android:state_selected="false" android:drawable="@drawable/circle_yellow"/>
+
+    <!--Register-->
+    <item android:state_activated="false" android:state_selected="true" android:drawable="@drawable/circle_blue"/>
+
+    <!--Disconnect-->
+    <item android:drawable="@drawable/circle_red"/>
+</selector>
