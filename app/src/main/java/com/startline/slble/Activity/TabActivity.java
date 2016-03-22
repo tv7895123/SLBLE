@@ -94,36 +94,6 @@ public class TabActivity extends FragmentActivity
 	private ProgressDialog mProgressDialog = null;
 
 
-	// ACL action receiver, including connect and disconnect
-	private final BroadcastReceiver mAclActionReceiver = new BroadcastReceiver()
-	{
-		@Override
-		public void onReceive(Context context, Intent intent)
-		{
-			final String action = intent.getAction();
-			final BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-
-			if (BluetoothDevice.ACTION_FOUND.equals(action))
-			{
-				//Toast.makeText(context, device.getName() + " Device found", Toast.LENGTH_LONG).show();
-			}
-			else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action))
-			{
-                //mBluetoothLeService.connectDevice(device.getAddress(),device.getName());
-				//Toast.makeText(context, device.getName() + " Device is now connected", Toast.LENGTH_LONG).show();
-			}
-			else if (BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action))
-			{
-				//Toast.makeText(context, device.getName() + " Device is about to disconnect", Toast.LENGTH_LONG).show();
-			}
-			else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action))
-			{
-				//Toast.makeText(context, device.getName() + " Device has disconnected", Toast.LENGTH_LONG).show();
-			}
-		}
-	};
-
-
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection()
 	{
@@ -142,7 +112,7 @@ public class TabActivity extends FragmentActivity
             mTabHost.setCurrentTab(1);
 
             // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService.connectDevice(mDeviceAddress,mDeviceName);
+            mBluetoothLeService.connectDevice(mDeviceAddress);
         }
 
         @Override
@@ -196,8 +166,7 @@ public class TabActivity extends FragmentActivity
                     case PARAM_GATT_READ_DEVICE_NAME:
                     {
                         // Update title
-                        final String nameUTF8 = mBluetoothLeService.getBleDeviceName();
-                        mDeviceName = (nameUTF8 != null)? nameUTF8 : mBluetoothLeService.getDevice().bluetoothDevice.getName();
+                        mDeviceName = mBluetoothLeService.getBluetoothDevice().getName();
                         getActionBar().setTitle(mDeviceName);
                     }
                     break;
@@ -418,16 +387,6 @@ public class TabActivity extends FragmentActivity
 		bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
 		registerReceiver(mNotifyMessageReceiver, makeIntentFilter());
-
-
-        // Register ACL action receiver
-        if(SUPPORT_BONDING)
-        {
-            final IntentFilter filter = new IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED);
-            filter.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED);
-            filter.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
-            registerReceiver(mAclActionReceiver,filter);
-        }
 	}
 
     @Override
@@ -460,16 +419,17 @@ public class TabActivity extends FragmentActivity
 		// If doesn't support multi-device connection, need to disconnect when activity destroy
 		if(SUPPORT_MULTI_DEVICE == false)
 		{
-			mBluetoothLeService.disconnect(false);
+			mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
+            mBluetoothLeService.disconnect(false);
 			unbindService(mServiceConnection);
 			mBluetoothLeService = null;
 		}
-
-        if(SUPPORT_BONDING)
+        else
         {
-            unregisterReceiver(mAclActionReceiver);
+            mBluetoothLeService.setupBluetoothDeviceFromCache("");
+            unbindService(mServiceConnection);
+            mBluetoothLeService = null;
         }
-
 		//stopService(new Intent().setClass(this,BluetoothLeIndependentService.class));
     }
 

@@ -28,7 +28,6 @@
         <activity android:name=".Activity.TabActivity" android:screenOrientation="portrait" android:configChanges="keyboard|keyboardHidden|navigation"/>
         <activity android:name=".Activity.SettingActivity" android:screenOrientation="portrait" android:configChanges="keyboard|keyboardHidden|navigation"/>
 
-        <receiver android:name=".Receiver.AlarmReceiver"/>
         <activity android:name=".Activity.KeyLessTuningActivity" android:label="Key less setting" android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="com.startline.slble.Activity.KeyLessTuningActivity"/>
@@ -36,5 +35,13 @@
             </intent-filter>
         </activity>
         <service android:name=".Service.BluetoothLeIndependentService" android:enabled="true" android:configChanges="keyboard|keyboardHidden|navigation"/>
+
+        <receiver android:name=".Receiver.BluetoothReceiver">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED"/>
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED"/>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED"/>
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -9,6 +9,7 @@ import android.content.*;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
@@ -46,7 +47,6 @@ public class DeviceListActivity extends Activity
     //  Object                                                         //
     //*****************************************************************//
 	private Context context;
-	private Handler mHandler = new Handler();
 	private BluetoothAdapter mBluetoothAdapter;
 	private BleSerializableDeviceAdapter mLeDeviceListAdapter;
 	private BleSerializableDeviceAdapter mBondDeviceListAdapter;
@@ -62,25 +62,17 @@ public class DeviceListActivity extends Activity
 	//private ProgressDialog progressDialog = null;
 
 
-    private final BroadcastReceiver mScanResultReceiver = new BroadcastReceiver()
+	private Handler mHandler = new Handler()
 	{
-        @Override
-        public void onReceive(Context context, Intent intent)
+		@Override
+		public void handleMessage(Message msg)
 		{
-            final String action = intent.getAction();
-            if (ACTION_SERVICE_NOTIFY_UI.equals(action))
+			if(msg.arg1 == BluetoothLeIndependentService.PARAM_SCAN_RESULT)
 			{
-				final int mode = intent.getIntExtra("param",-1);
-				switch (mode)
-				{
-					case PARAM_SCAN_RESULT:
-					{
-						final ArrayList<BleSerializableDevice> deviceList = (ArrayList<BleSerializableDevice>)intent.getSerializableExtra("device_scanned");
-						mLeDeviceListAdapter.setDevice(deviceList);
-						mLeDeviceListAdapter.notifyDataSetChanged();
-					}
-				}
-            }
+				final ArrayList<BleSerializableDevice> deviceList = (ArrayList<BleSerializableDevice>)msg.obj;
+				mLeDeviceListAdapter.setDevice(deviceList);
+				mLeDeviceListAdapter.notifyDataSetChanged();
+			}
 		}
 	};
 
@@ -144,10 +136,6 @@ public class DeviceListActivity extends Activity
 		super.onResume();
 
 		IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeIndependentService.ACTION_SERVICE_NOTIFY_UI);
-		registerReceiver(mScanResultReceiver, intentFilter);
-
-		intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeIndependentService.ACTION_DEBUG_SERVICE_TO_UI);
 		registerReceiver(mDebugDataReceiver, intentFilter);
 
@@ -170,10 +158,26 @@ public class DeviceListActivity extends Activity
         listViewScan.setAdapter(mLeDeviceListAdapter);
 
 
+		int delayTime = 0;
 		if(isServiceRunning(BluetoothLeIndependentService.class) == false)
 		{
 			startBluetoothLeService();
+			delayTime = 500;
 		}
+
+		mHandler.postDelayed(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
+				if(service != null)
+				{
+					service.setIpcCallbackhandler(mHandler);
+				}
+			}
+		},delayTime);
+
 
 		getLastDevice();
 
@@ -190,6 +194,8 @@ public class DeviceListActivity extends Activity
 					final String address = (String)v.getTag();
 					final Set<BluetoothDevice> deviceSet = getBondedDevice();
 					BluetoothDevice device = null;
+
+					// Get selected device
 					for (BluetoothDevice dev : deviceSet)
 					{
 						if(dev.getAddress().equals(address))
@@ -201,23 +207,45 @@ public class DeviceListActivity extends Activity
 
 					if(device != null)
 					{
-						unBondDevice(device);
-
-						mHandler.postDelayed(new Runnable()
+						final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
+						if(service != null)
 						{
-							@Override
-							public void run()
+							// If unbond device is connected with App, disconnect and close GATT to release it
+							final BluetoothLeIndependentService.CachedBluetoothDevice cachedBluetoothDevice = service.getCachedBluetoothDevice(address);
+							if(cachedBluetoothDevice != null)
 							{
-								// After unbond, refresh list adapter
-								updateBondedListAdapter();
+								if(cachedBluetoothDevice.bluetoothGatt != null)
+								{
+									cachedBluetoothDevice.bluetoothGatt.disconnect();
+									cachedBluetoothDevice.bluetoothGatt.close();
+								}
 							}
-						},800);
+
+							// Disconnect it from HID service
+							final BluetoothDevice bluetoothDevice = service.getConnectedBluetoothDevice(address);
+							if(bluetoothDevice != null)
+							{
+								service.closeBTConnection(bluetoothDevice);
+							}
+						}
 					}
 					// device not found
 					else
 					{
 
 					}
+
+					unBondDevice(device);
+
+					mHandler.postDelayed(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							// After unbond, refresh list adapter
+							updateBondedListAdapter();
+						}
+					},800);
 				}
 			});
 			listViewBond.setAdapter(mBondDeviceListAdapter);
@@ -242,8 +270,13 @@ public class DeviceListActivity extends Activity
 
 		btnStop.performClick();
 
-		unregisterReceiver(mScanResultReceiver);
 		unregisterReceiver(mDebugDataReceiver);
+
+		final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
+		if(service != null)
+		{
+			service.setIpcCallbackhandler(null);
+		}
 
         //mLeDeviceListAdapter.clear();
     }
