@@ -1,6 +1,7 @@
 package com.startline.slble.Util;
 
 import android.content.Context;
+import com.startline.slble.BuildConfig;
 import com.startline.slble.R;
 
 import java.sql.Timestamp;
@@ -22,7 +23,7 @@ import java.util.TimeZone;
 public class TimeUtil
 {
 
-	public final static String TAG = "com.ivtes.mapp";
+	public final static String TAG = BuildConfig.APPLICATION_ID;
 	public final static String FORMAT_FULL_TIME = "yyyy-MM-dd HH:mm:ss";
     public final static String FORMAT_YYYY_MM_dd_HH_mm = "yyyy-MM-dd HH:mm";
 	public final static String FORMAT_YYYY_MM_dd = "yyyy-MM-dd";
