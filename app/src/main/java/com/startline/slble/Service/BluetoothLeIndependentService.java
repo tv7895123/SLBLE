@@ -1752,7 +1752,7 @@ public class BluetoothLeIndependentService extends Service
 						@Override
 						public void run()
 						{
-							while(getConnectionState() != BluetoothProfile.STATE_CONNECTED)
+							while( getConnectedBluetoothDevice(deviceAddress) == null )
 							{
 								initConnection(deviceAddress);
 								try {
