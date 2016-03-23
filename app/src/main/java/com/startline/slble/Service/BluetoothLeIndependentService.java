@@ -118,6 +118,7 @@ public class BluetoothLeIndependentService extends Service
 	public final long TIMEOUT_BOND_TO_DISCONNECT = 8000;
 	public static final long TIMEOUT_TASK_RETRY = 3 * 1000;
 	public static final String KEYWORD_SLBLE = "SLBLE";
+	private static final String FILTER_ADDRESS = "48:36:5F";
 	private final String UUID_BLE_SERVICE = "0000FFF0-0000-1000-8000-00805F9B34FB";
 	private final String UUID_BLE_NOTIFY_CHANNEL = "0000FFF1-0000-1000-8000-00805F9B34FB";
 	private final String UUID_BLE_WRITE_CHANNEL = "0000FFF2-0000-1000-8000-00805F9B34FB";
@@ -745,7 +746,8 @@ public class BluetoothLeIndependentService extends Service
 
 
 				// Add scanned device into list
-				mBleDeviceRssiAdapter.addDevice(device, nameUTF8, rssi);
+				if(device.getAddress().startsWith(FILTER_ADDRESS))
+					mBleDeviceRssiAdapter.addDevice(device, nameUTF8, rssi);
 			}
 			catch (Exception e)
 			{
