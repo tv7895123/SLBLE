@@ -358,7 +358,7 @@ public class BluetoothLeIndependentService extends Service
 						}
 
 
-						// Action when receiving ACL_DISCONNECT after bonding success
+						// Action when not receiving ACL_DISCONNECT after bonding success
 						mRunnableBondToConnect = new Runnable()
 						{
 							@Override
@@ -1752,10 +1752,13 @@ public class BluetoothLeIndependentService extends Service
 						@Override
 						public void run()
 						{
-							while( getConnectedBluetoothDevice(deviceAddress) == null )
+							int tryTimes = 0;
+							while( getConnectedBluetoothDevice(deviceAddress) == null && tryTimes < 3)
 							{
 								initConnection(deviceAddress);
-								try {
+								tryTimes++;
+								try
+								{
 									Thread.sleep(2000);
 								} catch (InterruptedException e) {
 									e.printStackTrace();
