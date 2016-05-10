@@ -19,20 +19,16 @@ package com.startline.slble.Service;
 import android.app.*;
 import android.bluetooth.*;
 import android.content.*;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.os.*;
-import android.preference.PreferenceManager;
-import android.support.v7.app.NotificationCompat;
+import android.util.Base64;
 import android.util.Log;
-import android.widget.RemoteViews;
 import com.startline.slble.Adapter.BleDeviceRssiAdapter;
 import com.startline.slble.PureClass.*;
 import com.startline.slble.R;
 import com.startline.slble.Util.*;
-import com.startline.slble.module.BleConfiguration;
 import com.startline.slble.module.StaCstaDecode;
+import org.json.JSONObject;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -58,15 +54,10 @@ public class BluetoothLeIndependentService extends Service
 	//=================================================================//
 	// Debug mode
 	public static final int DEBUG_SHOW_ADV_DATA = 0x1;
-	public static final int DEBUG_MODE = DEBUG_SHOW_ADV_DATA & 0;
+	public static final int DEBUG_MODE = DEBUG_SHOW_ADV_DATA;
 
-	// Temperature Test
-	public int mDisconnectCount = -1;
-	private boolean mThermalTestEnabled = false;
-	private int mThermalCommandCount = 0;
-	private int mThermalCstaCount = 0;
-	private boolean mWaitThermalCsta = false;
-	private static final int THERMAL_COMMAND_INTERVAL = 30*1000;
+	// Record ADV Data
+	private final String SHOW_ADV_DATA_ADDRESS = "48:36:5F:00:00:FF";
 
 	//=================================================================//
 	//																   //
@@ -77,9 +68,6 @@ public class BluetoothLeIndependentService extends Service
 	private final String NEW_LINE_CHARACTER = "<BR/>";
 
 	public static final int CSTA_STA = 0;
-
-	public final int KEY_LESS_COMMAND_ARM = 0x01;
-	public final int KEY_LESS_COMMAND_DISARM = 0x09;
 
 	//--------------------------------------------------------------------
     // Connection State
@@ -92,26 +80,12 @@ public class BluetoothLeIndependentService extends Service
 
     //--------------------------------------------------------------------
 	// Connection Parameter
-	public static final int CONNECTION_RSSI_THRESHOLD = -82;
-	public static final int CONNECTION_TIMEOUT = 6*1000;
 	public static final int CONNECTION_MAX_RETRY = -1;
 	public static final int CONNECTION_MAX_CONNECT = -1;
 	public static final int SCAN_INTERVAL_MS = 500;
 	public static final int READ_RSSI_INTERVAL = 3000;
 	public static final long SCAN_PERIOD = 10 * 1000; // Stops scanning after 10 seconds.
 
-    //--------------------------------------------------------------------
-	// KeyLess
-	public static final int READ_RSSI_KEY_LESS_INTERVAL = 400;
-	public static final int READ_RSSI_KEY_LESS_TUNING_INTERVAL = 200;
-	public static final int RSSI_TUNING_TOLERANCE = 2;
-	public static final int RSSI_TUNING_STABLE_THRESHOLD = 5;
-	public static final int RSSI_STABLE_RECORD_NUMBER = 10;
-	public static final int RSSI_AVERAGE_RECORD_NUMBER = 10;
-	public static final int RSSI_REAL_TIME_RECORD_NUMBER = 10;
-	public static final int RSSI_KEY_LESS_OFFSET = -5;
-	public static final int RSSI_KEY_LESS_AUTO_DISARM_RSSI = -58;
-	public static final int RSSI_KEY_LESS_AUTO_ARM_RSSI = -85;
 
     //--------------------------------------------------------------------
 	// Process
@@ -129,26 +103,24 @@ public class BluetoothLeIndependentService extends Service
 	public static final int INIT_STATE_BOND_TO_CONNECT = 2;
 	public static final int INIT_STATE_BOND_OK = 3;
 	public static final int INIT_STATE_DEVICE_NAME = 4;
-	public static final int INIT_STATE_TX_POWER = 5;
-	public static final int INIT_STATE_INFORMATION = 6;
-	public static final int INIT_STATE_CSTA = 7;
-	public static final int INIT_STATE_END = 8;
+	public static final int INIT_STATE_INFORMATION = 5;
+	public static final int INIT_STATE_CSTA = 6;
+	public static final int INIT_STATE_END = 7;
+
+	//-------------------------------------------------------------------
+	// Keyless
+	public final int KEYLESS_CONNECT_TIME_HOUR = 1800;
+	public final int KEYLESS_CONNECT_TIME_DAY = 43200;
+	public final int KEYLESS_CONNECT_TIME_MAX = -1;
+
     //--------------------------------------------------------------------
     // Action from UI thread
     public static final String ACTION_UI_NOTIFY_SERVICE = "ACTION_UI_NOTIFY_SERVICE";
-	public static final int MODE_SET_CONFIGURATION = 0;
 	public static final int ACTION_START_SCAN = 1;
 	public static final int MODE_STOP_SCAN = 2;
 	public static final int MODE_CONNECT = 3;
 	public static final int MODE_DISCONNECT = 4;
 	public static final int MODE_CONTROL_COMMAND = 5;
-	public static final int MODE_KEY_LESS_TUNING = 6;
-	public static final int MODE_TX_POWER = 7;
-
-    // Debug
-	public static final String ACTION_DEBUG_UI_SERVICE = "ACTION_DEBUG_UI_SERVICE";
-    public static final int MODE_THERMAL_RESET = 0;
-
 
     //--------------------------------------------------------------------
 	// Notify UI thread
@@ -162,8 +134,6 @@ public class BluetoothLeIndependentService extends Service
     public static final int PARAM_PROCESS_STEP = 0x101;
     public static final int PARAM_RSSI = 0x102;
     public static final int PARAM_CSTA = 0x103;
-    public static final int PARAM_TUNING_RESULT = 0x104;
-    public static final int PARAM_STABLE_RSSI_RECORD = 0x105;
 
     // GATT
 	public static final int PARAM_GATT_CONNECTING = 0x200;
@@ -176,30 +146,7 @@ public class BluetoothLeIndependentService extends Service
     // Debug
 	public static final String ACTION_DEBUG_SERVICE_TO_UI = "ACTION_DEBUG_SERVICE_TO_UI";
     public static final int PARAM_ADV_DATA = 0;
-    public static final int PARAM_THERMAL = 1;
     public static final int PARAM_LOG = 2;
-
-
-
-
-    //--------------------------------------------------------------------
-	// AES
-	private static final String CIPHER_ALGORITHM_AES = "AES";
-	private static final String CIPHER_TRANSFORMATION = "AES/CBC/NoPadding";
-	private final byte[] DEFAULT_INITIALIZE_VECTOR = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	private final byte[] DEFAULT_AES_KEY = new byte[]
-	{
-		(byte) 0x92, (byte) 0xA5, (byte) 0x23, (byte) 0xCD, (byte) 0xF6, (byte) 0x68, (byte) 0x74, (byte) 0xBA
-		, (byte) 0x63, (byte) 0x73, (byte) 0x53, (byte) 0x55, (byte) 0xBF, (byte) 0x91, (byte) 0x02, (byte) 0xFA
-	};
-
-    //--------------------------------------------------------------------
-    // TX POWER
-	private final int[] TX_POWER_VALUE_ARRAY = new int[]
-	{
-        PARAM_TX_POWER_N_17_DBM,       PARAM_TX_POWER_N_15_DBM,       PARAM_TX_POWER_N_10_DBM,       PARAM_TX_POWER_N_5_DBM
-		,PARAM_TX_POWER_0_DBM,          PARAM_TX_POWER_2_DBM,           PARAM_TX_POWER_4_DBM,           PARAM_TX_POWER_7_DBM
-	};
 
 
 	//=================================================================//
@@ -210,14 +157,17 @@ public class BluetoothLeIndependentService extends Service
 	// Basic
     private final int RECEIVE_DATA_BUFFER_LENGTH = 100;
 
+	// App Setting
+	private int mobileNumber = 0;
+	private boolean mAutoConnectOnDisconnect = false;
+	private boolean mAutoScroll = false;
+
 	// AutoConnect
 	private boolean mAllowReConnect = true;
-	private boolean mAutoConnectOnDisconnect = false;
 
 	// Process
 	private int mDeviceInitState = INIT_STATE_NONE;
 	private boolean mScanning;
-	private boolean mWriteTxPower = false;
 	private int mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
 	private byte mPacketId = 0x0;
 	private byte[] mReceivedData = null;
@@ -226,37 +176,10 @@ public class BluetoothLeIndependentService extends Service
 	private int mTaskRetry = 0;
 	private int mConnectRetry = 0;
 	private int mReadRssiInterval = READ_RSSI_INTERVAL;
-	private int mBleSettingSendCount = 0;
 
 	// KeyLess
-	private boolean mKeyLessEnabled = false;
-	private boolean mKeyLessTuning = false;
-	private boolean mSlaveTag = false;
-	private int mAverageRssi = 0;
-	private int mLastKeyLessCommand = 0;
-	private int mRealTimeRssiRecordIndex = 0;
-	private int mAvgRssiRecordIndex = 0;
-	private int mStableRssiRecordIndex = 0;
-	private int mKeyLessThreshold = 0;
-	private int mRssiTuningStableCounter = 0;
-	private boolean mKeyLessArmAvailable = false;
-	private boolean mKeyLessDisarmAvailable = false;
-	private boolean mIsCarArm = false;
-	private boolean mISCarLock = false;
-	private long mLastTimeRecordAverageRssi = -1;
-	private long mLastTimeRecordStableRssiRecord = -1;
-	private long mLastTimeRecordTuningRssi = -1;
-	private int[] mRealTimeRssiRecord = null;
-	private int[] mAvgRssiRecord = null;
-	private int[] mStableRssiRecord = null;
-
-	// For debug
-	private long mLastTimeTryConnect = 0;
-	private boolean mTestMode = false;
-	private int mDebugParameter = -1;
-	private boolean mDebugFormatError = false;
-	private boolean mDebugPingNoAck = false;
-
+	private int mConnectTimeLimit = KEYLESS_CONNECT_TIME_MAX;
+	private int mConnectTimeLimitScreenOff = KEYLESS_CONNECT_TIME_HOUR;
 
 	//=================================================================//
 	//																   //
@@ -282,7 +205,7 @@ public class BluetoothLeIndependentService extends Service
 	private static ArrayList<CachedBluetoothDevice> mCachedDeviceList = null;
 	private boolean mBTConnectionRequest = false;
 	private Runnable mRunnableBondToConnect = null;
-
+	private static Thread mThreadConnect = null;
 	//=================================================================//
 	//																   //
 	//  Custom  Class		                                           //
@@ -475,23 +398,6 @@ public class BluetoothLeIndependentService extends Service
 		}
 	};
 
-	// This is for Thermal Test
-	// It will send CONTROL_ALARM_CHECK_CAR_STATUS periodically and wait for response
-	private final Runnable thermalRunnable = new Runnable()
-	{
-		@Override
-		public void run()
-		{
-			// Set a wait csta flag to indicate we have to receive a csta later
-			mWaitThermalCsta = true;
-			mThermalCommandCount++;
-			sendCommand(CONTROL_ALARM_CHECK_CAR_STATUS);
-            broadcastDebugNotifyUi(getThermalIntent(16|32,mThermalCommandCount+"",mThermalCstaCount+""));
-
-			mHandler.postDelayed(thermalRunnable,THERMAL_COMMAND_INTERVAL);
-		}
-	};
-
 
 	// Implements callback methods for GATT events that the app cares about.
 	// For example,connection change and services discovered.
@@ -606,19 +512,9 @@ public class BluetoothLeIndependentService extends Service
 
 						appendLog(formatConnectionString("Get device name"));
 
-						mDeviceInitState = INIT_STATE_TX_POWER;
+						mDeviceInitState = INIT_STATE_DEVICE_NAME;
 
                         initDeviceState();// Get device name
-					}
-					else if(characteristic.getUuid().toString().equalsIgnoreCase(CHAR_TX_POWER_LEVEL))
-					{
-                        final int dbValue = characteristic.getValue()[0];
-                        LogUtil.d(TAG, "[Process] ]Read TxPower value : " + dbValue,Thread.currentThread().getStackTrace());
-
-                        // dbValue from device
-                        saveTxPowerValue(dbValue);
-
-                        initDeviceState(); // Read Tx Power
 					}
 				}
 			}
@@ -703,13 +599,7 @@ public class BluetoothLeIndependentService extends Service
 			{
 				if (rssi < 0)
 				{
-					if (mKeyLessTuning
-							|| mKeyLessEnabled
-							)
-					{
-						recordRssi(rssi);
-					}
-					broadcastNotifyUi(getRssiIntent(rssi, mAverageRssi));
+					broadcastNotifyUi(getRssiIntent(rssi, 0));
 				}
 			}
 			else
@@ -727,6 +617,18 @@ public class BluetoothLeIndependentService extends Service
 		{
 			try
 			{
+				if((DEBUG_MODE & DEBUG_SHOW_ADV_DATA) > 0)
+				{
+					if(device.getAddress().equals(SHOW_ADV_DATA_ADDRESS))
+					{
+						final Intent intent = new Intent(ACTION_DEBUG_SERVICE_TO_UI);
+						intent.putExtra("param",PARAM_ADV_DATA);
+						intent.putExtra("adv_data",scanRecord);
+						broadcastIntent(intent);
+					}
+				}
+
+
 				// Decode device name
 				final BleAdvertisedData advertisedData = BleUtil.parseAdertisedData(scanRecord);
 				String nameUTF8 = advertisedData.getName();
@@ -772,63 +674,6 @@ public class BluetoothLeIndependentService extends Service
                     final int mode = intent.getIntExtra("mode",-1);
                     switch (mode)
                     {
-                        case MODE_SET_CONFIGURATION:
-                        {
-                            final String key = intent.getStringExtra("key");
-                            if(key.equals(getString(R.string.pref_key_auto_connect)))
-                            {
-                                mAutoConnectOnDisconnect = intent.getBooleanExtra("auto_connect", false);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_slave_tag)))
-                            {
-                                mSlaveTag = intent.getBooleanExtra("slave_tag", false);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_key_less)))
-                            {
-                                mKeyLessEnabled = intent.getBooleanExtra("key_less", false);
-                                mKeyLessArmAvailable = intent.getBooleanExtra("key_less_arm", false);
-                                mKeyLessDisarmAvailable = intent.getBooleanExtra("key_less_disarm", false);
-                                updateKeyLessConfiguration();
-                            }
-                            else if(key.equals(getString(R.string.pref_key_tx_power)))
-                            {
-                                // value from SettingActivity,it is index of TX_POWER_VALUE_ARRAY
-                                final int value = intent.getIntExtra("tx_power", -1);
-                                sendTxPowerSetting(value);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_test_mode)))
-                            {
-                                mTestMode = intent.getBooleanExtra("test_mode", false);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_ping_no_ack)))
-                            {
-                                mDebugPingNoAck = intent.getBooleanExtra("ping_no_ack",false);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_format_error)))
-                            {
-                                mDebugFormatError = intent.getBooleanExtra("format_error", false);
-                            }
-                            else if(key.equals(getString(R.string.pref_key_thermal_test)))
-                            {
-                                mThermalTestEnabled = intent.getBooleanExtra("thermal_test", false);
-
-                                // If disabled, remove runnable
-                                if(mThermalTestEnabled == false)
-                                {
-                                    mHandler.removeCallbacks(thermalRunnable);
-                                }
-                                else
-                                {
-                                    // If enabled and already at connected state, set up runnable
-                                    if(getConnectionState() == BluetoothProfile.STATE_CONNECTED)
-                                    {
-                                        mHandler.postDelayed(thermalRunnable,THERMAL_COMMAND_INTERVAL);
-                                    }
-                                }
-                            }
-                        }
-                        break;
-
                         case ACTION_START_SCAN:
                         {
                             // Clear original device list
@@ -897,57 +742,8 @@ public class BluetoothLeIndependentService extends Service
                             sendCommand(cmd);
                         }
                         break;
-
-                        case MODE_KEY_LESS_TUNING:
-                        {
-                            if (mKeyLessTuning == false)
-                            {
-                                mKeyLessTuning = true;
-                            }
-                            else
-                            {
-                                mKeyLessTuning = false;
-                            }
-                            settingRssiTimer();
-
-                            mRssiTuningStableCounter = 0;
-                            resetRssiRecord();
-                            resetAvgRssiRecord();
-                        }
-                        break;
-
-                        case MODE_TX_POWER:
-                        {
-                            final int value = intent.getIntExtra("tx_power", -1);
-                            if(value >= 0)
-                            {
-                                sendTxPowerSetting(TX_POWER_VALUE_ARRAY[value]);
-                            }
-                        }
-                        break;
                     }
 
-				}
-				else if (action.equals(ACTION_DEBUG_UI_SERVICE))
-				{
-                    final int mode = intent.getIntExtra("mode",-1);
-                    switch (mode)
-                    {
-                        case MODE_THERMAL_RESET:
-                        {
-                            final boolean reset = intent.getBooleanExtra("thermal_reset",false);
-
-                            // Reset thermal test configuration
-                            if(reset)
-                            {
-                                mDisconnectCount = -1;
-                                mThermalCommandCount = 0;
-                                mThermalCstaCount = 0;
-                                mWaitThermalCsta = false;
-                            }
-                        }
-                        break;
-                    }
 				}
 			}
 			catch (Exception e)
@@ -1037,10 +833,6 @@ public class BluetoothLeIndependentService extends Service
 		context = this;
 		serviceInstance = this;
 
-		resetRssiRecord();
-		resetAvgRssiRecord();
-		resetStableRssiRecord();
-
 		getAppConfiguration();
 
 
@@ -1118,6 +910,26 @@ public class BluetoothLeIndependentService extends Service
 		return mIpcCallbackHandler;
 	}
 
+	public void setAutoConnectOnDisconnect(final boolean enable)
+	{
+		mAutoConnectOnDisconnect = enable;
+	}
+
+	public boolean getAutoConnectOnDisconnect()
+	{
+		return mAutoConnectOnDisconnect;
+	}
+
+	public void setAutoScroll(final boolean enable)
+	{
+		mAutoScroll = enable;
+	}
+
+	public boolean getAutoScroll()
+	{
+		return mAutoScroll;
+	}
+
 	public void setupBluetoothDeviceFromCache(final String address)
 	{
 		// Get device form cache
@@ -1164,18 +976,27 @@ public class BluetoothLeIndependentService extends Service
 
 	private void getAppConfiguration()
 	{
-		final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-		mAutoConnectOnDisconnect = sharedPreferences.getBoolean(getString(R.string.pref_key_auto_connect),false);
-		mSlaveTag = sharedPreferences.getBoolean(getString(R.string.pref_key_slave_tag),false);
-		mKeyLessEnabled = sharedPreferences.getBoolean(getString(R.string.pref_key_key_less),false);
-		mKeyLessThreshold = getKeyLessThreshold();
-		getKeyLessArmSetting();
-		getKeyLessDisarmSetting();
+		final String appSetting = readAppSetting();
+		if(appSetting.isEmpty())
+		{
+			mobileNumber = 0;
+			setAutoConnectOnDisconnect(false);
+			setAutoScroll(false);
+		}
+		else
+		{
+			try
+			{
+				JSONObject jsonObject = new JSONObject(appSetting);
+				mobileNumber = jsonObject.getInt(getString(R.string.title_mobile_number));
+				setAutoConnectOnDisconnect(jsonObject.get(getString(R.string.title_auto_connect)) == 1);
+				setAutoScroll(jsonObject.get(getString(R.string.title_auto_scroll)) == 1);
+			}
+			catch (Exception e)
+			{
 
-		mTestMode = sharedPreferences.getBoolean(getString(R.string.pref_key_test_mode),false);
-		mDebugPingNoAck = sharedPreferences.getBoolean(getString(R.string.pref_key_ping_no_ack),false);
-		mDebugFormatError = sharedPreferences.getBoolean(getString(R.string.pref_key_format_error),false);
-		mThermalTestEnabled = sharedPreferences.getBoolean(getString(R.string.pref_key_thermal_test),false);
+			}
+		}
 	}
 
 	public void clearAllDevice()
@@ -1258,16 +1079,11 @@ public class BluetoothLeIndependentService extends Service
 			{
 				case INIT_STATE_DEVICE_NAME:
 				{
-					readTxPower();
-					mDeviceInitState = INIT_STATE_TX_POWER;
-				}
-				break;
-				case INIT_STATE_TX_POWER:
-				{
-					initSendBleSetting();
+					sendRequestBleSetting();
 					mDeviceInitState = INIT_STATE_INFORMATION;
 				}
 				break;
+
 				case INIT_STATE_INFORMATION:
 				{
 					sendRequestCsta();
@@ -1292,237 +1108,6 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void updateKeyLessConfiguration()
-	{
-		initSendBleSetting();
-		if(mKeyLessEnabled)
-		{
-			mKeyLessThreshold = getKeyLessThreshold();
-			// Key less turn to enabled, reset all record
-			if(mKeyLessDisarmAvailable || mKeyLessArmAvailable)
-			{
-				resetRssiRecord();
-				resetAvgRssiRecord();
-				resetStableRssiRecord();
-			}
-		}
-		settingRssiTimer();
-	}
-
-	private void resetRssiRecord()
-	{
-		mRealTimeRssiRecordIndex = 0;
-		mRealTimeRssiRecord = new int[RSSI_REAL_TIME_RECORD_NUMBER];
-	}
-
-	private void resetAvgRssiRecord()
-	{
-		mAvgRssiRecordIndex = 0;
-		mAverageRssi = 0;
-		mAvgRssiRecord = new int[RSSI_AVERAGE_RECORD_NUMBER];
-	}
-
-	private void resetStableRssiRecord()
-	{
-		mStableRssiRecordIndex = 0;
-		mStableRssiRecord = new int[RSSI_STABLE_RECORD_NUMBER];
-	}
-
-	// Average Algorithm
-	//*
-	private void recordRssi(final int rssi)
-	{
-		int temp = 0;
-		int validNumber = 0;
-		int realTimeAvg = 0;
-
-
-		// Save real time rssi
-		mRealTimeRssiRecord[mRealTimeRssiRecordIndex++] = rssi;
-		if(mRealTimeRssiRecordIndex == mRealTimeRssiRecord.length)
-			mRealTimeRssiRecordIndex = 0;
-
-
-		// Get the average Rssi from real time Rssi record at this time
-		for(int i=0;i<mRealTimeRssiRecord.length;i++)
-		{
-			if(mRealTimeRssiRecord[i] < 0)
-				validNumber++;
-			temp += mRealTimeRssiRecord[i];
-		}
-		if(validNumber > 0)
-		//if(validNumber == mRssiRecord.length)
-			realTimeAvg = temp / validNumber;
-		else
-			realTimeAvg = 0;
-
-
-
-		// Save real time average Rssi
-		//if(System.currentTimeMillis()-mLastTimeRecordAverageRssi > (mKeyLessTuning? 0 : 300))
-		{
-			mLastTimeRecordAverageRssi = System.currentTimeMillis();
-			mAvgRssiRecord[mAvgRssiRecordIndex++] = realTimeAvg;
-			if(mAvgRssiRecordIndex == mAvgRssiRecord.length)
-				mAvgRssiRecordIndex = 0;
-
-
-			// Get average Rssi from AvgRssiRecord
-			temp = 0;
-			validNumber = 0;
-			for(int i=0 ; i< mAvgRssiRecord.length ; i++)
-			{
-				if (mAvgRssiRecord[i] < 0)
-					validNumber++;
-				temp += mAvgRssiRecord[i];
-			}
-			if(validNumber > 0)
-			//if(validNumber == mAvgRssiRecord.length)
-				mAverageRssi = temp / validNumber;
-			else
-				mAverageRssi = 0;
-		}
-
-
-
-		// For key less tuning
-		if(mKeyLessTuning)
-		{
-			// Wait until mAvgRssiRecord is full
-			if(validNumber == mAvgRssiRecord.length)
-			{
-				tuningKeyLessRssi();
-			}
-			broadcastNotifyUi(getTuningResultIntent(0, mRealTimeRssiRecord,mAvgRssiRecord,mAverageRssi));
-		}
-
-
-		// For key less enable
-		// Wait until mAvgRssiRecord is full
-		else if(mKeyLessEnabled && (mKeyLessArmAvailable || mKeyLessDisarmAvailable) && validNumber == mAvgRssiRecord.length)
-		{
-			broadcastNotifyUi(getTuningResultIntent(0, mRealTimeRssiRecord,mAvgRssiRecord,mAverageRssi));
-			if(getConnectionState() == BluetoothProfile.STATE_CONNECTED)
-				handleKeyLess(realTimeAvg);
-		}
-	}
-
-	private void tuningKeyLessRssi()
-	{
-		// Judge if Rssi value is stable or not in the last 5 seconds
-		// Judge once per second
-		if(System.currentTimeMillis()-mLastTimeRecordTuningRssi > 1000)
-		{
-			mLastTimeRecordTuningRssi = System.currentTimeMillis();
-			boolean stable = true;
-
-			// All the record must close the last average Rssi
-			// The difference must less than tolerance
-			for(int i=0;i<mAvgRssiRecord.length;i++)
-			{
-				if(Math.abs(mAverageRssi-mAvgRssiRecord[i]) > RSSI_TUNING_TOLERANCE)
-				{
-					stable = false;
-					break;
-				}
-			}
-
-			// Count how stable it is
-			if(stable)
-			{
-				mRssiTuningStableCounter ++;
-			}
-			else
-			{
-				mRssiTuningStableCounter = 0;
-			}
-
-			// If it's stable still for 5 seconds, save the tuning result
-			if(mRssiTuningStableCounter == RSSI_TUNING_STABLE_THRESHOLD)
-			{
-				broadcastNotifyUi(getTuningResultIntent(1,mRealTimeRssiRecord,mAvgRssiRecord,mAverageRssi));
-				mKeyLessTuning = false;
-				mKeyLessThreshold = mAverageRssi;
-				saveKeyLessThreshold(mAverageRssi);
-
-				settingRssiTimer();
-			}
-		}
-	}
-
-
-	// Using Average Algorithm
-	private void handleKeyLess(final int realTimeAvg)
-	{
-		if(System.currentTimeMillis()-mLastTimeRecordStableRssiRecord > 1000)
-		{
-			mLastTimeRecordStableRssiRecord = System.currentTimeMillis();
-			mStableRssiRecord[mStableRssiRecordIndex++] = mAverageRssi;
-
-			if(mStableRssiRecordIndex == mStableRssiRecord.length)
-				mStableRssiRecordIndex = 0;
-		}
-
-		// Sort stable record from new to old ASC
-		final int[] stableRecord = sortArray(mStableRssiRecord,RSSI_STABLE_RECORD_NUMBER,mStableRssiRecordIndex);
-        broadcastNotifyUi(getStableRssiRecordIntent(stableRecord));
-
-		// Sort average record from new to old ASC
-		final int[] averageRecord = sortArray(mAvgRssiRecord,RSSI_AVERAGE_RECORD_NUMBER,mAvgRssiRecordIndex);
-
-		// Sort real time record from new to old ASC
-		final int[] realTimeRecord = sortArray(mRealTimeRssiRecord,RSSI_REAL_TIME_RECORD_NUMBER,mRealTimeRssiRecordIndex);
-
-
-        // Keyless can only action after init process finished
-		if(isDeviceInitialized())
-			analyzeKeyLessBehavior(realTimeRecord,averageRecord,stableRecord);
-	}
-
-	private void analyzeKeyLessBehavior(final int[] realTimeRecord, final int[] averageRecord, final int[] stableRecord)
-	{
-		final int disArmThreshold = mKeyLessThreshold + RSSI_KEY_LESS_OFFSET;
-		final int armThreshold = mKeyLessThreshold;
-
-		// Disarm
-		if( mKeyLessDisarmAvailable )
-		{
-			if(	//realTimeRecord[0]-mKeyLessThreshold > 0
-				//&& (averageRecord[0]-averageRecord[1] > 0 || realTimeRecord[0] - realTimeRecord[1] > 0)
-				//&& averageRecord[0] > averageRecord[1] && averageRecord[1] > averageRecord[2] //&& averageRecord[2] > averageRecord[3] //&& averageRecord[3] > averageRecord[4]
-				//&& stableRecord[0] > stableRecord[1] &&  stableRecord[1] > stableRecord[2]
-				mAverageRssi > Math.max(RSSI_KEY_LESS_AUTO_DISARM_RSSI,disArmThreshold)
-			)
-			{
-				if(mIsCarArm)
-				{
-					mKeyLessDisarmAvailable = false;
-					sendKeyLessCommand(KEY_LESS_COMMAND_DISARM);
-					//settingRssiTimer(READ_RSSI_KEY_LESS_INTERVAL);
-				}
-				return;
-			}
-		}
-
-		// Arm
-		if( mKeyLessArmAvailable )
-		{
-			if( (armThreshold - averageRecord[0] > 0 && armThreshold - averageRecord[1] > 0 && armThreshold - averageRecord[2] > 0
-					&& averageRecord[0] < averageRecord[1] && averageRecord[1] < averageRecord[2] && averageRecord[2] < averageRecord[3]
-					&& stableRecord[0] < stableRecord[1] && stableRecord[1] < stableRecord[2])
-				|| mAverageRssi <= armThreshold -10
-				)
-			{
-				if(mIsCarArm == false)
-				{
-					mKeyLessArmAvailable = false;
-					sendKeyLessCommand(KEY_LESS_COMMAND_ARM);
-				}
-				//settingRssiTimer(READ_RSSI_KEY_LESS_INTERVAL);
-			}
-		}
-	}
-
 	private int[] sortArray(final int[] array,final int length, final int latestIndex)
 	{
 		final int offsetIndex = latestIndex-1;
@@ -1536,16 +1121,6 @@ public class BluetoothLeIndependentService extends Service
 
 		return record;
 	}
-
-	private void sendKeyLessCommand(final int cmd)
-	{
-		//if(mLastKeyLessCommand != cmd)
-		{
-			mLastKeyLessCommand = cmd;
-			sendCommand(cmd);
-		}
-	}
-
 
 
 	protected  double getDistance(int rssi, int txPower)
@@ -1700,91 +1275,14 @@ public class BluetoothLeIndependentService extends Service
 		return mConnectionState;
 	}
 
-	// For non member function calls
-	public void connectDevice(final String deviceAddress)
+
+
+	// For non member function calls,bonding or connect
+	public void connectDevice(final String address)
 	{
-		LogUtil.d(TAG,"[Process] connectDevice address : "+deviceAddress,Thread.currentThread().getStackTrace());
-		if(deviceAddress == null || deviceAddress.length() == 0)
-		{
-			return;
-		}
+		LogUtil.d(TAG,"[Process] connectDevice address : "+address,Thread.currentThread().getStackTrace());
 
-		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-		broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
-
-		// Connected with OS
-		if(isBluetoothDeviceConnected(deviceAddress))
-		{
-			// Cached with App
-			if(isBluetoothDeviceCached(deviceAddress))
-			{
-				setupBluetoothDeviceFromCache(deviceAddress);
-			}
-			else
-			{
-				// Connected,not cached
-				_connectDevice(deviceAddress);
-			}
-		}
-		// Not connected
-		else
-		{
-			boolean paired = false;
-
-			// Check if paired
-			final Set<BluetoothDevice> bondDeviceSet = mBluetoothAdapter.getBondedDevices();
-			for(BluetoothDevice bluetoothDevice:bondDeviceSet)
-			{
-				if(bluetoothDevice.getAddress().equals(deviceAddress))
-				{
-					paired = true;
-					break;
-				}
-			}
-
-			// Paired, start BTConnection first
-			if(paired)
-			{
-				try
-				{
-					new Thread()
-					{
-						@Override
-						public void run()
-						{
-							int tryTimes = 0;
-							while( getConnectedBluetoothDevice(deviceAddress) == null && tryTimes < 3)
-							{
-								initConnection(deviceAddress);
-								tryTimes++;
-								try
-								{
-									Thread.sleep(2000);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-							}
-						}
-					}.start();
-
-				}
-				catch (Exception e)
-				{
-					LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
-				}
-			}
-			// Not paired, start bond
-			else
-			{
-				_connectDevice(deviceAddress);
-			}
-		}
-	}
-
-	// init mBluetoothDevice and start BTConnect
-	public void initConnection(final String address)
-	{
-		LogUtil.d(TAG,"[Process] initConnection address : "+address,Thread.currentThread().getStackTrace());
+		// Check bluetooth adapter
 		if(mBluetoothAdapter == null)
 		{
 			LogUtil.e(TAG, "[Error] mBluetoothAdapter is null.  Unable to connect.",Thread.currentThread().getStackTrace());
@@ -1799,33 +1297,34 @@ public class BluetoothLeIndependentService extends Service
 			return;
 		}
 
-		createBTConnection();
-	}
-
-	// Bonding or connect
-	private void _connectDevice(final String address)
-	{
-		LogUtil.d(TAG,"[Process] connectDevice address : "+address,Thread.currentThread().getStackTrace());
-
-		// Get device from adapter
-		setBluetoothDevice(mBluetoothAdapter.getRemoteDevice(address));
-		if (mBluetoothDevice == null)
+		// If device not bonded, start bonding
+		if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
 		{
-			LogUtil.e(TAG, "[Error] mBluetoothDevice not found.  Unable to connect.",Thread.currentThread().getStackTrace());
-			return;
+			_bondingDevice();
 		}
-
-		// Check if address valid
-		if(address!= null && address.length() > 0)
+		// Device bonded, try to connect to it
+		else
 		{
-			// If device not bonded, start bonding
-			if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
+			// Connected with OS
+			if(isBluetoothDeviceConnected(address))
 			{
-				_bondingDevice();
+				// Cached with App
+				if(isBluetoothDeviceCached(address))
+				{
+					LogUtil.d(getPackageName(),"Device cached",Thread.currentThread().getStackTrace());
+				}
+				else
+				{
+					LogUtil.d(getPackageName(),"Device connected not cached with app, start binding ",Thread.currentThread().getStackTrace());
+
+					// Connected,not cached, start bind it with app
+					_bind();
+				}
 			}
-			// Device bonded, try to connect to it
+			// Not connected
 			else
 			{
+				// start connect
 				_connect();
 			}
 		}
@@ -1846,7 +1345,7 @@ public class BluetoothLeIndependentService extends Service
 
 	private void reConnectDevice()
 	{
-		if((mKeyLessEnabled && (mKeyLessArmAvailable || mKeyLessDisarmAvailable) || mKeyLessTuning) || CONNECTION_MAX_CONNECT == -1 || mConnectRetry++ < CONNECTION_MAX_CONNECT)
+		if( CONNECTION_MAX_CONNECT == -1 || mConnectRetry++ < CONNECTION_MAX_CONNECT)
 		{
 			LogUtil.d(TAG,"[Process] reConnectDevice",Thread.currentThread().getStackTrace());
 			//broadcastConnectStatus(ACTION_BLE_NOTIFY_CONNECT_STATUS,CONNECTION_STATE_RE_CONNECTING);
@@ -1874,13 +1373,88 @@ public class BluetoothLeIndependentService extends Service
 		LogUtil.d(TAG, "[Process] connect",Thread.currentThread().getStackTrace());
 		try
 		{
+			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
+
+			int delayTime = 0;
+			if(mThreadConnect != null)
+			{
+				return;
+			}
+
+			final String address = mBluetoothDevice.getAddress();
+			mThreadConnect = new Thread()
+			{
+				@Override
+				public void run()
+				{
+
+					int bondTimes = 0;
+					boolean gotException = false;
+
+					while(!gotException																			// No exception
+							&& mBluetoothAdapter.isEnabled()													// Bluetooth enabled
+							&& getConnectedBluetoothDevice(address) == null										// Device not connected
+							&& (mConnectTimeLimit<0 || bondTimes<mConnectTimeLimit) )						// unLimit connect or Connect times under limit
+					{
+						try
+						{
+							final Set<BluetoothDevice> bondDeviceSet = mBluetoothAdapter.getBondedDevices();
+							boolean bond = false;
+							for(BluetoothDevice bluetoothDevice:bondDeviceSet)
+							{
+								if(bluetoothDevice.getAddress().equals(address))
+								{
+									bond = true;
+
+									break;
+								}
+							}
+
+							if(bond)
+							{
+								LogUtil.d(getPackageName(),"Device not connected, start connect "+bondTimes,Thread.currentThread().getStackTrace());
+								bondTimes++;
+								createBTConnection();
+							}
+							else
+							{
+								LogUtil.d(getPackageName(),"Device not bond!! It was already unbond.",Thread.currentThread().getStackTrace());
+								break;
+							}
+							Thread.sleep(2000);
+						}
+						catch (InterruptedException e)
+						{
+							gotException = true;
+							e.printStackTrace();
+						}
+					}
+					mThreadConnect = null;
+					LogUtil.d(getPackageName(),"Leaving initConnection loop.",Thread.currentThread().getStackTrace());
+				}
+			};
+
+			mThreadConnect.start();
+		}
+		catch (Exception e)
+		{
+			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+			LogUtil.e(TAG, e.toString(), Thread.currentThread().getStackTrace());
+		}
+	}
+
+	private void _bind()
+	{
+		LogUtil.d(TAG, "[Process] _bind",Thread.currentThread().getStackTrace());
+		try
+		{
 			if(mBluetoothDevice == null)
 			{
 				LogUtil.d(TAG, "[Error] mBluetoothDevice is null.",Thread.currentThread().getStackTrace());
 				return;
 			}
 
-
+			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
 			final int connectionState = getConnectionState();
 			if(connectionState == BluetoothProfile.STATE_CONNECTING )
 			{
@@ -1988,7 +1562,7 @@ public class BluetoothLeIndependentService extends Service
 					// App not connected, bind it
 					if(getConnectionState() == BluetoothProfile.STATE_DISCONNECTED)
 					{
-						_connectDevice(mBluetoothDevice.getAddress());
+						_bind();
 					}
 				}
 			}
@@ -2179,13 +1753,6 @@ public class BluetoothLeIndependentService extends Service
 		readFromCharacteristic(CHAR_DEVICE_NAME);
 	}
 
-	private void readTxPower()
-	{
-        LogUtil.d(TAG, "[Process] readTxPower",Thread.currentThread().getStackTrace());
-        appendLog(formatSendString("readTxPower"));
-		readFromCharacteristic(CHAR_TX_POWER_LEVEL);
-	}
-
 	private void readFromCharacteristic(final String strCharacteristicUuid)
 	{
 		try
@@ -2251,29 +1818,9 @@ public class BluetoothLeIndependentService extends Service
 	}
 
 
-
 	private void settingRssiTimer()
 	{
-		if(mKeyLessTuning)
-		{
-			settingRssiTimer(READ_RSSI_KEY_LESS_TUNING_INTERVAL);
-		}
-		else if(mKeyLessEnabled && (mKeyLessArmAvailable || mKeyLessDisarmAvailable))
-		{
-			// If unlock is enable,we need to read Rssi frequently
-			if(mKeyLessDisarmAvailable)
-			{
-				settingRssiTimer(READ_RSSI_KEY_LESS_TUNING_INTERVAL);
-			}
-			else
-			{
-				settingRssiTimer(READ_RSSI_KEY_LESS_INTERVAL);
-			}
-		}
-		else
-		{
-			settingRssiTimer(READ_RSSI_INTERVAL);
-		}
+		settingRssiTimer(READ_RSSI_INTERVAL);
 	}
 
 
@@ -2323,15 +1870,8 @@ public class BluetoothLeIndependentService extends Service
 
             broadcastNotifyUi(getGattIntent(PARAM_GATT_CONNECTED));
 
-			// Debug information
-			mLastTimeTryConnect = 0;
-
             // Update read rssi period
 			settingRssiTimer();
-
-			getKeyLessDisarmSetting();
-
-			getKeyLessArmSetting();
 
 			// If services characteristics is empty,
 			// It is the first connect, update flow step and start discovery services
@@ -2360,28 +1900,6 @@ public class BluetoothLeIndependentService extends Service
 			// Clear timer when disconnected, avoid re-connect automatically
 			removeConnectionTimeout(); //handleBleDisconnect
 
-			 // Remove runnable when disconnect to avoid unexpected action
-			if(mThermalTestEnabled)
-			{
-				mHandler.removeCallbacks(thermalRunnable);
-
-				// If was login, record disconnect count
-				if(isDeviceInitialized())
-				{
-					// First Disconnect
-					if(mDisconnectCount == 0)
-					{
-						mDisconnectCount++;
-                        broadcastDebugNotifyUi(getThermalIntent(4|64,TimeUtil.getTimeNow(TimeUtil.FORMAT_HH_mm),mDisconnectCount+""));
-					}
-					else
-					{
-						mDisconnectCount++;
-                        broadcastDebugNotifyUi(getThermalIntent(8|64,TimeUtil.getTimeNow(TimeUtil.FORMAT_HH_mm),mDisconnectCount+""));
-					}
-				}
-			}
-
 			if(isDeviceInitialized())
 				playDisconnectedSound();
 
@@ -2402,7 +1920,7 @@ public class BluetoothLeIndependentService extends Service
 			}
 
 			// If autoConnect is enabled or is tuning key less, re-connect it
-			if(mAutoConnectOnDisconnect || mKeyLessTuning)
+			if(mAutoConnectOnDisconnect)
 			{
 				reConnectAfterMilliSeconds(2000); // Re-connect if AutoConnect or KeyLessTuning is enabled
 			}
@@ -2467,13 +1985,6 @@ public class BluetoothLeIndependentService extends Service
 		LogUtil.d(TAG,"[Process] Receive Csta : " + s,Thread.currentThread().getStackTrace());
 		appendLog(formatReceiveString("Receive Csta"));
 
-		if(mThermalTestEnabled && mWaitThermalCsta)
-		{
-			mWaitThermalCsta = false;
-			mThermalCstaCount++;
-            broadcastDebugNotifyUi(getThermalIntent(16|32,mThermalCommandCount+"",mThermalCstaCount+""));
-		}
-
 		// First packet of Csta data
 		// Allocate a new array buffer
 		if(cstaSequence == 1 || mReceivedDataBuffer == null)
@@ -2525,11 +2036,6 @@ public class BluetoothLeIndependentService extends Service
 	private void decodeCstaSta(final byte[] cstaFlag)
 	{
 		final int arm = StaCstaDecode.getArmSTA(cstaFlag);
-
-		if(arm == 1)
-			mIsCarArm = true;
-		else
-			mIsCarArm = false;
 	}
 
 	private void handleBleResponse(final byte[] receiveData)
@@ -2571,11 +2077,7 @@ public class BluetoothLeIndependentService extends Service
 			{
 				case CMD_ACK:
 				{
-					if(mWriteTxPower == true)
-					{
-						readTxPower();
-                        mWriteTxPower = false;
-					}
+
 				}
 				break;
 				case CMD_CAR_STATUS:
@@ -2588,9 +2090,6 @@ public class BluetoothLeIndependentService extends Service
 
 				case CMD_CHECK_CONNECTION:
 				{
-					// Debug
-					if(mDebugPingNoAck == true) return;
-
 					final byte[] writeData = new byte[PACKET_LENGTH];
 					writeData[PACKET_ID] = receiveData[PACKET_ID];
 					writeData[PACKET_COMMAND] = receiveData[PACKET_COMMAND];
@@ -2602,65 +2101,12 @@ public class BluetoothLeIndependentService extends Service
 				}
 				break;
 
-				case CMD_SLAVE_TAG:
-				{
-					// Skip if SlaveTag is disabled
-					if(mSlaveTag == false)
-						return;
-
-
-					// Check parameter
-					if(receiveData[PACKET_PARAMETER] != PARAM_SLAVE_TAG_REQUEST)
-						return;
-
-					// Init packet content
-					final byte[] writeData = new byte[PACKET_LENGTH];
-					writeData[PACKET_ID] = receiveData[PACKET_ID];
-					writeData[PACKET_COMMAND] = receiveData[PACKET_COMMAND];
-					writeData[PACKET_PARAMETER] = PARAM_SLAVE_TAG_RESPONSE;
-
-					// Fill data, the first byte fill DATA_SLAVE_TAG, others random number
-					final byte[] data = generateRandomArray(16,255);
-					data[0] = DATA_SLAVE_TAG;
-					fillData(writeData,data);
-
-					// Fill check sum
-					writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
-
-					final String s = formatByteArrayToLog(receiveData);
-					LogUtil.d(TAG, "[Tag] Request tag " + s,Thread.currentThread().getStackTrace());
-					appendLog(formatReceiveString("Request tag"));
-
-					final long delay = receiveData[PACKET_DATA];
-
-					// send data
-					if(delay == 0)
-						sendPlainData(writeData);
-					else
-					{
-						mHandler.postDelayed(new Runnable()
-						{
-							@Override
-							public void run()
-							{
-								sendPlainData(writeData);
-							}
-						},delay*1000);
-					}
-				}
-				break;
-
 				case CMD_SETTING_INFORMATION:
 				{
-					// If receive ble setting from device, save it and response back
-					if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_SEND)
-                    {
-                        responseBleSetting(receiveData);
-                    }
                     // Receive response from device, check if data is match we sent before
-					else if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_RESPONSE)
+					if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_RESPONSE)
                     {
-                        checkBleSetting(receiveData);
+						saveBleSetting(subByteArray(receiveData,3,16));
                     }
 				}
 				break;
@@ -2672,120 +2118,18 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void initSendBleSetting()
+	public void sendRequestBleSetting()
 	{
-		mBleSettingSendCount = 0;
-		sendBleSetting();
-	}
-
-	private void reSendBleSetting()
-	{
-		if(mBleSettingSendCount < 3)
-		{
-			sendBleSetting();
-			mBleSettingSendCount++;
-		}
-		else
-		{
-			disconnect(true);
-		}
-	}
-
-	// Send Ble Setting to device
-	private void sendBleSetting()
-	{
-        LogUtil.d(TAG, "[Process] sendBleSetting",Thread.currentThread().getStackTrace());
-        appendLog(formatSendString("sendBleSetting"));
+		LogUtil.d(TAG, "[Process] Send RequestBleSetting",Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send RequestBleSetting"));
 		// Init packet content
 		final byte[] writeData = new byte[PACKET_LENGTH];
 		writeData[PACKET_ID] = getRandom(255);
 		writeData[PACKET_COMMAND] = CMD_SETTING_INFORMATION;
-		writeData[PACKET_PARAMETER] = PARAM_SETTING_SEND;
+		writeData[PACKET_PARAMETER] = PARAM_SETTING_REQUEST;
+		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
 
-		sendBleSettingPacket(writeData);
-	}
-
-	// Response Ble Setting to device
-	private void responseBleSetting(final byte[] receiveData)
-	{
-		// Init packet content
-		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = receiveData[PACKET_ID];
-		writeData[PACKET_COMMAND] = CMD_SETTING_INFORMATION;
-		writeData[PACKET_PARAMETER] = PARAM_SETTING_RESPONSE;
-
-		final String s = formatByteArrayToLog(receiveData);
-		LogUtil.d(TAG, "Request Ble setting " + s,Thread.currentThread().getStackTrace());
-		appendLog(formatReceiveString("Request Ble setting"));
-
-
-		saveBleConfiguration(subByteArray(receiveData,3,10));
-
-		sendBleSettingPacket(writeData);
-	}
-
-
-	// Check Ble Setting we received, if not equal , re-send Ble Setting
-	private void checkBleSetting(final byte[] receiveData)
-	{
-		LogUtil.d(TAG, "[Process] checkBleSetting",Thread.currentThread().getStackTrace());
-		appendLog(formatSendString("checkBleSetting"));
-		// Ble setting local
-		final byte[] dataLocal = readBleConfiguration();
-
-		// Ble setting from device
-		final byte[] dataDevice = subByteArray(receiveData,3,10);
-
-
-		if(dataLocal == null || dataLocal.length == 0) return;
-
-		if(dataDevice == null || dataDevice.length == 0)
-		{
-			reSendBleSetting();
-			return;
-		}
-
-		for(int i=0 ; i<10;i++)
-		{
-			if(dataLocal[i] != dataDevice[i])
-			{
-				reSendBleSetting();
-				return;
-			}
-		}
-
-		// Packet parameter is 1
-		// We can get mobile number from data
-		if(receiveData[PACKET_PARAMETER] == 1)
-		{
-			final byte[] mobileNum = subByteArray(receiveData,13,1);
-			final SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
-			editor.putString(Constants.CONFIG_ITEM_MOBILE_NUMBER,String.valueOf(((int)(mobileNum[0])))).apply();
-		}
-
-        initDeviceState(); // Check information
-	}
-
-	private void sendBleSettingPacket(final byte[] writeData)
-	{
-		try
-		{
-			// Fill data, the first byte fill DATA_SLAVE_TAG, others random number
-			byte[] data = readBleConfiguration();
-
-			// If mDeviceAuthenticated is true
-			fillData(writeData,data);
-
-			// Fill check sum
-			writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
-
-			// send data
-			sendPlainData(writeData);
-		}
-		catch (Exception e)
-		{
-			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
-		}
+		sendPlainData(writeData);
 	}
 
 	private void sendErrorMessage(final boolean keepRandom,final int errorCode)
@@ -2856,39 +2200,6 @@ public class BluetoothLeIndependentService extends Service
 		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
 
 		sendPlainData(writeData);
-	}
-
-
-	private void sendTxPowerSetting(final int value)
-	{
-		try
-		{
-			if( getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
-
-			final byte[] writeData = new byte[PACKET_LENGTH];
-			writeData[PACKET_ID] = getRandom(255);
-			writeData[PACKET_COMMAND] = CMD_TX_POWER;
-			writeData[PACKET_PARAMETER] = (byte)value;
-
-			final byte[] data = generateRandomArray(16,255);
-			fillData(writeData,data);
-
-			// fill check sum
-			writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
-
-
-			final String s = formatByteArrayToLog(writeData);
-			LogUtil.d(TAG, "[Process] Set Tx Power  : " + s,Thread.currentThread().getStackTrace());
-			appendLog(formatSendString("Set Tx Power  : " + String.format("0x%02X", value)));
-
-
-            mWriteTxPower = true;
-			sendPlainData(writeData);
-		}
-		catch (Exception e)
-		{
-			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
-		}
 	}
 
 	public void sendCommand(final int cmd)
@@ -3162,69 +2473,6 @@ public class BluetoothLeIndependentService extends Service
         return intent;
     }
 
-
-	private Intent getThermalIntent(final int mode, final String... param)
-	{
-		try
-		{
-			final Intent intent = new Intent();
-			intent.setAction(ACTION_DEBUG_SERVICE_TO_UI);
-            intent.putExtra("param",PARAM_THERMAL);
-			intent.putExtra("mode",mode);
-			int paramIndex = 0;
-			if((mode & 0x1) > 0)
-			{
-				intent.putExtra("first_connect",param[paramIndex]);
-				paramIndex++;
-			}
-
-			if((mode & 0x2) > 0)
-			{
-				intent.putExtra("last_connect",param[paramIndex]);
-				paramIndex++;
-			}
-
-			if((mode & 0x4) > 0)
-			{
-				intent.putExtra("first_disconnect",param[paramIndex]);
-				paramIndex++;
-			}
-
-			if((mode & 0x8) > 0)
-			{
-				intent.putExtra("last_disconnect",param[paramIndex]);
-				paramIndex++;
-			}
-
-			if((mode & 0x10) > 0)
-			{
-				intent.putExtra("thermal_command_count",param[paramIndex]);
-				paramIndex++;
-			}
-
-			if((mode & 0x20) > 0)
-			{
-				intent.putExtra("thermal_csta_count",param[paramIndex]);
-				paramIndex++;
-			}
-
-			// Disconnect count
-			if((mode & 0x40) > 0)
-			{
-				intent.putExtra("disconnect_count",param[paramIndex]);
-				paramIndex++;
-			}
-
-            return intent;
-		}
-		catch (Exception e)
-		{
-			LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
-		}
-
-        return null;
-	}
-
 	private void broadcastIntent(final Intent intent)
 	{
 		LogUtil.d(TAG, String.format("[Broadcast] :  %s" ,intent.getAction()),Thread.currentThread().getStackTrace());
@@ -3275,29 +2523,6 @@ public class BluetoothLeIndependentService extends Service
         return intent;
 	}
 
-	private Intent getTuningResultIntent(final int tuningResult,final int[] rssiRecord,final int[] avgRssiRecord, final int avgRssi)
-	{
-        final Intent intent = new Intent();
-        intent.putExtra("param",PARAM_TUNING_RESULT);
-		intent.putExtra("tuningResult", tuningResult);
-		if(avgRssi < 0)
-        {
-            intent.putExtra("avgRssi",avgRssi);
-        }
-		intent.putExtra("rssiRecord", sortArray(rssiRecord,rssiRecord.length,mRealTimeRssiRecordIndex));
-		intent.putExtra("avgRssiRecord",sortArray(avgRssiRecord,avgRssiRecord.length,mAvgRssiRecordIndex));
-
-        return intent;
-	}
-
-	private Intent getStableRssiRecordIntent(final int[] rssiRecord)
-	{
-        final Intent intent = new Intent();
-        intent.putExtra("param",PARAM_STABLE_RSSI_RECORD);
-		intent.putExtra("rssiRecord", rssiRecord);
-        return intent;
-	}
-
 	private Intent getProcessStepIntent(final int step)
 	{
         final Intent intent = new Intent();
@@ -3330,8 +2555,6 @@ public class BluetoothLeIndependentService extends Service
 		{
 			final IntentFilter intentFilter = new IntentFilter();
 			intentFilter.addAction(ACTION_UI_NOTIFY_SERVICE);
-			intentFilter.addAction(ACTION_DEBUG_UI_SERVICE);
-
 			registerReceiver(mMessageFromUiReceiver, intentFilter);
 		}
 		catch (Exception e)
@@ -3397,11 +2620,13 @@ public class BluetoothLeIndependentService extends Service
 
 			if(bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
 			{
-				if(mDeviceInitState == INIT_STATE_BONDING || mDeviceInitState == INIT_STATE_BOND_TO_CONNECT)
+				// During bonding process, do not connect , do nothing until bonding finish
+				if(mDeviceInitState == INIT_STATE_BONDING || mDeviceInitState == INIT_STATE_BOND_TO_CONNECT || bluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
 				{
 					LogUtil.d(TAG,"After bonding , wait for disconnect ",Thread.currentThread().getStackTrace());
 					return;
 				}
+
 				// Check if it is a bonded device when we receiving ACL_CONNECTED message
 				// If it is not bonded, it is the first ACL_CONNECTED during bonding or not what we want
 				if(bluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
@@ -3642,131 +2867,59 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private String getLastDeviceName()
+	public String readAppSetting()
 	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-
-		return sharedPreferences.getString(Constants.CONFIG_ITEM_BLE_DEVICE_NAME, "--");
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String dataString =  sharedPreferences.getString(Constants.CONFIG_ITEM_APP_SETTING,"");
+		return dataString;
 	}
 
-	private int getKeyLessThreshold()
+	public void saveAppSetting()
 	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		return sharedPreferences.getInt(Constants.CONFIG_ITEM_KEY_LESS_THRESHOLD, 0);
-	}
-
-	private void getKeyLessArmSetting()
-	{
-		final long setting = readBleSetting();
-		mKeyLessArmAvailable = BleConfiguration.getValue(setting,BleConfiguration.BLE_SETTING_KEY_LES_ARM,BleConfiguration.MASK_BIT)==1?true:false;
-	}
-
-	private void getKeyLessDisarmSetting()
-	{
-		final long setting = readBleSetting();
-		mKeyLessDisarmAvailable = BleConfiguration.getValue(setting,BleConfiguration.BLE_SETTING_KEY_LES_DISARM,BleConfiguration.MASK_BIT)==1?true:false;
-	}
-
-	private void saveKeyLessThreshold(final int value)
-	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		final SharedPreferences.Editor editor = sharedPreferences.edit();
-
-		editor.putInt(Constants.CONFIG_ITEM_KEY_LESS_THRESHOLD, value);
-		editor.commit();
-	}
-
-	private byte[] readBleConfiguration()
-	{
-		final long infoValue = readBleInfo();
-		final long settingValue = readBleSetting();
-
-		final byte[] byteInfo = longToBytes(infoValue);
-		final byte[] byteSetting = longToBytes(settingValue);
-
-		final byte[] configuration = new byte[16];
-		for(int i=0; i<5; i++)
+		final JSONObject jsonObject = new JSONObject();
+		try
 		{
-			configuration[i] = byteInfo[i];
+			jsonObject.put(getString(R.string.title_mobile_number),mobileNumber);
+			jsonObject.put(getString(R.string.title_auto_connect),mAutoConnectOnDisconnect?1:0);
+			jsonObject.put(getString(R.string.title_auto_scroll),mAutoScroll?1:0);
 		}
-		for(int i=0; i<5; i++)
+		catch (Exception e)
 		{
-			configuration[5+i] = byteSetting[i];
+
 		}
 
-//		for(int i=0; i<6; i++)
-//		{
-//			configuration[10+i] = getRandom(255);
-//		}
-
-		return configuration;
+		saveAppSetting(jsonObject);
 	}
 
-	private boolean saveBleConfiguration(final byte[] data)
+	public void saveAppSetting(final JSONObject jsonObject)
 	{
-		if(data == null || data.length == 0) return false;
-
-		final byte[] tempInfo = subByteArray(data,0,5);
-		final byte[] tempSetting = subByteArray(data,5,5);
-
-		final byte[] info = new byte[8];
-		for(int i=0;i<tempInfo.length;i++)
-			info[i]=tempInfo[i];
-
-		final byte[] setting = new byte[8];
-		for(int i=0;i<tempSetting.length;i++)
-			setting[i]=tempSetting[i];
-
-		saveBleInfo(byteArrayToLong(info));
-		saveBleSetting(byteArrayToLong(setting));
-
-		return true;
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String dataString =  jsonObject.toString();
+		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_APP_SETTING,dataString).apply();
 	}
 
-	private long readBleSetting()
+	private byte[] readBleSetting()
 	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		return sharedPreferences.getLong(Constants.CONFIG_ITEM_BLE_SETTING,0);
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String encodeString =  sharedPreferences.getString(Constants.CONFIG_ITEM_BLE_SETTING,"");
+		byte[] data = Base64.decode(encodeString,Base64.DEFAULT);
+
+		if(data == null || data.length == 0)
+		{
+			data = new byte[12];
+		}
+		return data;
 	}
 
-	private long readBleInfo()
+
+	private void saveBleSetting(final byte[] data)
 	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		return sharedPreferences.getLong(Constants.CONFIG_ITEM_BLE_INFO,0);
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String encodeString =  Base64.encodeToString(data,Base64.DEFAULT);
+		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_BLE_SETTING,encodeString).apply();
+
+		initDeviceState();
 	}
-
-	private void saveBleSetting(final long data)
-	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		sharedPreferences.edit().putLong(Constants.CONFIG_ITEM_BLE_SETTING,data).apply();
-	}
-
-	private void saveBleInfo(final long data)
-	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-		sharedPreferences.edit().putLong(Constants.CONFIG_ITEM_BLE_INFO,data).apply();
-	}
-
-	private void saveTxPowerValue(final int value)
-    {
-        final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        final int lastIndex = Integer.parseInt( sharedPreferences.getString(getString(R.string.pref_key_tx_power),"-1"));
-
-        // Get index pf TX_POWER_VALUE_ARRAY by value
-        int dbIndex = -1;
-        for(int i=0;i<TX_POWER_VALUE_ARRAY.length;i++)
-        {
-            if(value == TX_POWER_VALUE_ARRAY[i])
-            {
-                dbIndex = i;
-                break;
-            }
-        }
-
-        // if index changed and new index is valid, save it
-        if(dbIndex != lastIndex && dbIndex != -1)
-            sharedPreferences.edit().putString(getString(R.string.pref_key_tx_power),dbIndex+"").apply();
-    }
 
 	//*****************************************************************//
 	//  Special  function                                              //

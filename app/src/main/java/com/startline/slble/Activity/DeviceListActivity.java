@@ -39,9 +39,7 @@ public class DeviceListActivity extends Activity
     //*****************************************************************//
     //  Global Variables                                               //
     //*****************************************************************//
-	private boolean mScanning = false;
-	private String deviceName = null;
-	private String deviceAddress = null;
+	private boolean mIsScanning = false;
 
     //*****************************************************************//
     //  Object                                                         //
@@ -50,6 +48,7 @@ public class DeviceListActivity extends Activity
 	private BluetoothAdapter mBluetoothAdapter;
 	private BleSerializableDeviceAdapter mLeDeviceListAdapter;
 	private BleSerializableDeviceAdapter mBondDeviceListAdapter;
+
     //*****************************************************************//
     //  View                                                           //
     //*****************************************************************//
@@ -121,8 +120,6 @@ public class DeviceListActivity extends Activity
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE))
 		{
             Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
-			return;
-            //finish();
         }
 
 		context = this;
@@ -177,9 +174,6 @@ public class DeviceListActivity extends Activity
 				}
 			}
 		},delayTime);
-
-
-		getLastDevice();
 
 
 		// Update bonded device list
@@ -325,20 +319,6 @@ public class DeviceListActivity extends Activity
 	{
 		try
 		{
-//			progressDialog = new ProgressDialog(context);
-//			progressDialog.setMessage("Scanning...");
-//			progressDialog.setOnDismissListener(new DialogInterface.OnDismissListener()
-//			{
-//				@Override
-//				public void onDismiss(DialogInterface dialog)
-//				{
-//					if(mScanning)
-//					{
-//						btnStop.performClick();
-//					}
-//				}
-//			});
-
 			layoutProgress = (LinearLayout)findViewById(R.id.layout_progress);
 
 			listViewScan = (ListView)findViewById(R.id.listview_scan);
@@ -347,7 +327,7 @@ public class DeviceListActivity extends Activity
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view, int position, long id)
 				{
-					if (mScanning)
+					if (mIsScanning)
 					{
 						btnStop.performClick();
 					}
@@ -368,7 +348,7 @@ public class DeviceListActivity extends Activity
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view, int position, long id)
 				{
-					if (mScanning)
+					if (mIsScanning)
 					{
 						btnStop.performClick();
 					}
@@ -433,7 +413,7 @@ public class DeviceListActivity extends Activity
 
 	private void updateButtonState()
 	{
-		if (!mScanning)
+		if (!mIsScanning)
 		{
 //			btnStop.setTextColor(getResources().getColor(android.R.color.darker_gray));
 //			btnScan.setTextColor(getResources().getColor(android.R.color.black));
@@ -449,27 +429,6 @@ public class DeviceListActivity extends Activity
 			btnStop.setEnabled(true);
 			btnScan.setEnabled(false);
         }
-	}
-
-	private void getLastDevice()
-	{
-		deviceName = getDeviceName();
-		deviceAddress = getDeviceAddress();
-	}
-
-
-	private String getDeviceAddress()
-	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-
-		return sharedPreferences.getString(Constants.CONFIG_ITEM_BLE_DEVICE_ADDRESS, "");
-	}
-
-	private String getDeviceName()
-	{
-		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_BLE_SETTING, Context.MODE_PRIVATE);
-
-		return sharedPreferences.getString(Constants.CONFIG_ITEM_BLE_DEVICE_NAME, "");
 	}
 
 	private void startDeviceConnectActivity(final String name,final String address)
@@ -502,7 +461,7 @@ public class DeviceListActivity extends Activity
 
 	private Intent notifyStartScanDevice()
 	{
-	 	mScanning = true;
+	 	mIsScanning = true;
         updateButtonState();
 
         final Intent intent = new Intent();
@@ -512,7 +471,7 @@ public class DeviceListActivity extends Activity
 
 	private Intent notifyStopScanDevice()
 	{
-		mScanning = false;
+		mIsScanning = false;
 		updateButtonState();
 
         final Intent intent = new Intent();

@@ -24,8 +24,6 @@ public class SlbleProtocol
 	public static final int CMD_ERROR_MESSAGE = 0x03;
 	public static final int CMD_CAR_STATUS = 0x20;
 	public static final int CMD_PHONE_CONTROL_COMMAND = 0x30;
-	public static final int CMD_SLAVE_TAG = 0x31;
-	public static final int CMD_TX_POWER = 0x40;
 	public static final int CMD_CHECK_CONNECTION = 0x50;
 	public static final int CMD_SETTING_INFORMATION = 0x60;
 
@@ -60,24 +58,8 @@ public class SlbleProtocol
 	public static final int PARAM_CONTROL_PHONE_SEND_COMMAND = 0xFF;
 
 
-	// CMD_SLAVE_TAG   0x31
-	public static final int PARAM_SLAVE_TAG_REQUEST = 0x00;
-	public static final int PARAM_SLAVE_TAG_RESPONSE = 0x01;
-	public static final int DATA_SLAVE_TAG = 0x71;
-
-	// CMD_TX_POWER   0x40
-	public static final int PARAM_TX_POWER_7_DBM = 7;
-	public static final int PARAM_TX_POWER_4_DBM = 4;
-	public static final int PARAM_TX_POWER_2_DBM = 2;
-	public static final int PARAM_TX_POWER_0_DBM = 0;
-	public static final int PARAM_TX_POWER_N_5_DBM = -5;
-	public static final int PARAM_TX_POWER_N_10_DBM = -10;
-	public static final int PARAM_TX_POWER_N_15_DBM = -15;
-	public static final int PARAM_TX_POWER_N_17_DBM = -17;
-
-
 	// CMD_SETTING_CAR_ALARM_FUNCTION   0x60
-	public static final int PARAM_SETTING_SEND = 0x00;
+	public static final int PARAM_SETTING_REQUEST = 0x00;
 	public static final int PARAM_SETTING_RESPONSE = 0x01;
     //*****************************************************************//
     //  Protocol functions                                             //

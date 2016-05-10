@@ -26,7 +26,7 @@
         </activity>
 
         <activity android:name=".Activity.TabActivity" android:screenOrientation="portrait" android:configChanges="keyboard|keyboardHidden|navigation"/>
-        <activity android:name=".Activity.SettingActivity" android:screenOrientation="portrait" android:configChanges="keyboard|keyboardHidden|navigation"/>
+        <activity android:name=".Activity.SettingListActivity" android:screenOrientation="portrait" android:configChanges="keyboard|keyboardHidden|navigation"/>
 
         <activity android:name=".Activity.KeyLessTuningActivity" android:label="Key less setting" android:screenOrientation="portrait">
             <intent-filter>

@@ -6,24 +6,14 @@ package com.startline.slble.module;
 public class BleConfiguration
 {
 //***************************			Info		***************************
-//	Name	Bit 7	Bit 6	Bit 5	Bit 4	Bit 3	Bit 2	Bit 1		Bit 0
-//	BUF[0]	---		---		---		---		---		---		---			Mobile Type
-//	BUF[1]	---		---		---		---		---		---		---			---
-//	BUF[2]	---		---		---		---		---		---		---			---
-//	BUF[3]	---		---		---		---		---		---		---			---
-//	BUF[4]	---		---		---		---		---		---		---			---
-	public static final int BLE_INFO_MOBILE_TYPE = 0;
+//	Name	Bit 7	Bit 6	Bit 5	Bit 4	Bit 3	Bit 2	Bit 1	Bit 0
+//	BUF[0]	---		---		---		---		Mobile number
+//	BUF[1]	Disarm                  		Arm
+//	BUF[2]	---		---		---		---		---		---		---		---
+//	BUF[3]	---		---		---		---		---		---		---		---
+//	BUF[4]	---		---		---		---		---		---		---		---
 
-
-//***************************			Setting		***************************
-//	BUF[5]	---		---		---		---		---		---		Keyless Arm	Keyless Disarm
-//	BUF[6]	---		---		---		---		---		---		---			---
-//	BUF[7]	---		---		---		---		---		---		---			---
-//	BUF[8]	---		---		---		---		---		---		---			---
-//	BUF[9]	---		---		---		---		---		---		---			---
-	public static final int BLE_SETTING_KEY_LES_DISARM = 0;
-	public static final int BLE_SETTING_KEY_LES_ARM = 1;
-
+	public static final int BYTE_KEY_LESS = 1;
 
     public static final int MASK_BIT = 0x01;
     public static final int MASK_4BIT = 0x0F;

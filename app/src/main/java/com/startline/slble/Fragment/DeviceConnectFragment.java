@@ -174,7 +174,6 @@ public class DeviceConnectFragment extends Fragment
 			@Override
 			public void onClick(View v)
 			{
-				resetThermal();
 			}
 		});
 
@@ -202,7 +201,7 @@ public class DeviceConnectFragment extends Fragment
 			@Override
 			public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l)
 			{
-                sendAction(getTxPowerIntent(i));
+                //sendAction(getTxPowerIntent(i));
 			}
 
 			@Override
@@ -220,12 +219,12 @@ public class DeviceConnectFragment extends Fragment
 		return intent;
 	}
 
-	private Intent getTxPowerIntent(final int value)
-	{
-        final Intent intent = getUiActionIntent(BluetoothLeIndependentService.MODE_TX_POWER);
-		intent.putExtra("tx_power",value);
-		return intent;
-	}
+//	private Intent getTxPowerIntent(final int value)
+//	{
+//        final Intent intent = getUiActionIntent(BluetoothLeIndependentService.MODE_TX_POWER);
+//		intent.putExtra("tx_power",value);
+//		return intent;
+//	}
 
 
 	//==============================================================================
@@ -236,22 +235,6 @@ public class DeviceConnectFragment extends Fragment
 		Log.i(TAG, "sendUiActionBroadcast : " + intent.getIntExtra("mode",-1));
 		intent.setAction(BluetoothLeIndependentService.ACTION_UI_NOTIFY_SERVICE);
 		getActivity().sendBroadcast(intent);
-	}
-
-
-	//==============================================================================
-	//  Call TabActivity function
-	//==============================================================================
-	private void resetThermal()
-	{
-		txtFirstConnect.setText("--:--");
-		txtLastConnect.setText("--:--");
-		txtFirstDisconnect.setText("--:--");
-		txtLastDisconnect.setText("--:--");
-		txtThermalCommandCount.setText("0");
-		txtThermalCstaCount.setText("0");
-		txtDisconnectCount.setText("0");
-		((TabActivity) getActivity()).resetThermalTest(true);
 	}
 
 	//==============================================================================
@@ -403,13 +386,20 @@ textView.setText(Html.fromHtml(text), TextView.BufferType.SPANNABLE);
 			//mTxtLog.setText("");
 		}
 
+		if(log.isEmpty())
+		{
 
-		final Date date = new Date();
-		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm:ss.sss", Locale.ENGLISH);
-		final String time = String.format("[ %s ]",simpleDateFormat.format(date));
-		final Spanned text = Html.fromHtml(time + "<BR/>" + log + "<BR/>");
-		mTxtLog.append(text);
-		appendLog(time + "\n" + log + "\n");
+		}
+		else
+		{
+			final Date date = new Date();
+			final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm:ss.sss", Locale.ENGLISH);
+			final String time = String.format("[ %s ]",simpleDateFormat.format(date));
+			final Spanned text = Html.fromHtml(time + "<BR/>" + log + "<BR/>");
+			mTxtLog.append(text);
+			appendLog(time + "\n" + log + "\n");
+		}
+
 
 		if(autoScrollDown)
 		{

@@ -33,38 +33,16 @@
     <string name="ok">確定</string>
 	<string name="cancel">取消</string>
 
-    <string name = "pref_key_mobile_number">pref_key_mobile_number</string>
-    <string name = "pref_key_auto_wake_up">pref_key_auto_wake_up</string>
-    <string name = "pref_key_auto_connect">pref_key_auto_connect</string>
-    <string name = "pref_key_auto_scroll">pref_key_auto_scroll</string>
-    <string name = "pref_key_slave_tag">pref_key_slave_tag</string>
-    <string name = "pref_key_user_password">pref_key_user_password</string>
-    <string name = "pref_key_key_less">pref_key_key_less</string>
-    <string name = "pref_key_key_less_arm">pref_key_key_less_arm</string>
-    <string name = "pref_key_key_less_disarm">pref_key_key_less_disarm</string>
-    <string name = "pref_key_key_less_tuning">pref_key_key_less_tuning</string>
-    <string name = "pref_key_tx_power">pref_key_tx_power</string>
-    <string name = "pref_key_test_mode">pref_key_test_mode</string>
-    <string name = "pref_key_ping_no_ack">pref_key_ping_no_ack</string>
-    <string name = "pref_key_format_error">pref_key_format_error</string>
-    <string name = "pref_key_thermal_test">pref_key_thermal_test</string>
+    <string name = "title_app_setting">APP Setting</string>
+    <string name = "title_ble_setting">BLE Setting</string>
 
-    <string name = "pref_title_mobile_number">Mobile number</string>
-    <string name = "pref_title_auto_wake_up">Auto wake up</string>
-    <string name = "pref_title_auto_connect">Auto connect</string>
-    <string name = "pref_title_auto_scroll">Auto scroll</string>
-    <string name = "pref_title_slave_tag">Slave tag</string>
-    <string name = "pref_title_user_password">User password</string>
-    <string name = "pref_title_change_password">Change password</string>
-    <string name = "pref_title_key_less">Key less</string>
-    <string name = "pref_title_key_less_arm">Arm</string>
-    <string name = "pref_title_key_less_disarm">Disarm</string>
-    <string name = "pref_title_key_less_tuning">Tuning</string>
-    <string name = "pref_title_tx_power">Tx power</string>
-    <string name = "pref_title_test_mode">Test mode</string>
-    <string name = "pref_title_ping_no_ack">Ping no ack</string>
-    <string name = "pref_title_format_error">Format error</string>
-    <string name = "pref_title_thermal_test">Thermal test</string>
+    <string name = "title_mobile_number">Mobile number</string>
+    <string name = "title_auto_connect">Auto connect</string>
+    <string name = "title_auto_scroll">Auto scroll</string>
+
+    <string name = "description_mobile_number">Total number of phones which are bound to device</string>
+    <string name = "description_auto_connect">Auto re-connect when device is disconnected</string>
+    <string name = "description_auto_scroll">Auto scroll down to the newest log message</string>
 
     <string name="day">日</string>
 	<string name="days">天</string>
