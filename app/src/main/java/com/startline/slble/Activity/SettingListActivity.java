@@ -127,6 +127,7 @@ public class SettingListActivity extends Activity
 		List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
 
 		final String appSetting = service.readAppSetting();
+		final byte[] bleSetting = service.readBleSetting();
 		JSONObject jsonObject = null;
 		try
 		{
@@ -149,7 +150,14 @@ public class SettingListActivity extends Activity
 					Map<String, Object> map = new HashMap<String, Object>();
 					map.put("title", getDisplayString(titleArray[i]));
 					map.put("description", getDisplayString(descriptionArray[i]));
-					map.put("value",jsonObject.getInt(getDisplayString(titleArray[i])));
+					if(i == 0)
+					{
+						map.put("value",(int)bleSetting[0]);
+					}
+					else
+					{
+						map.put("value",jsonObject.getInt(getDisplayString(titleArray[i])));
+					}
 					list.add(map);
 				}
 			}

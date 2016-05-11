@@ -40,7 +40,7 @@
     <string name = "title_auto_connect">Auto connect</string>
     <string name = "title_auto_scroll">Auto scroll</string>
 
-    <string name = "description_mobile_number">Total number of phones which are bound to device</string>
+    <string name = "description_mobile_number">Number of phones which are bonded to device</string>
     <string name = "description_auto_connect">Auto re-connect when device is disconnected</string>
     <string name = "description_auto_scroll">Auto scroll down to the newest log message</string>
 

@@ -109,8 +109,9 @@ public class BluetoothLeIndependentService extends Service
 
 	//-------------------------------------------------------------------
 	// Keyless
-	public final int KEYLESS_CONNECT_TIME_HOUR = 1800;
-	public final int KEYLESS_CONNECT_TIME_DAY = 43200;
+	public final int KEYLESS_CONNECT_INTERVAL = 10*1000;												// ms
+	public final int KEYLESS_CONNECT_TIME_HOUR = 3600*1000/KEYLESS_CONNECT_INTERVAL;		// Keep trying in one hour
+	public final int KEYLESS_CONNECT_TIME_DAY = KEYLESS_CONNECT_TIME_HOUR*24;				// Keep trying in one day
 	public final int KEYLESS_CONNECT_TIME_MAX = -1;
 
     //--------------------------------------------------------------------
@@ -162,7 +163,7 @@ public class BluetoothLeIndependentService extends Service
 	private boolean mAutoConnectOnDisconnect = false;
 	private boolean mAutoScroll = false;
 
-	// AutoConnect
+	// Allow reconnect
 	private boolean mAllowReConnect = true;
 
 	// Process
@@ -177,9 +178,11 @@ public class BluetoothLeIndependentService extends Service
 	private int mConnectRetry = 0;
 	private int mReadRssiInterval = READ_RSSI_INTERVAL;
 
-	// KeyLess
-	private int mConnectTimeLimit = KEYLESS_CONNECT_TIME_MAX;
-	private int mConnectTimeLimitScreenOff = KEYLESS_CONNECT_TIME_HOUR;
+	// Keyless
+	private int mConnectTimeLimitScreenOn = KEYLESS_CONNECT_TIME_MAX;		// Limit times for screen on, default MAX
+	private int mConnectTimeLimitScreenOff = KEYLESS_CONNECT_TIME_HOUR;		// Limit times for screen off, default ONE HOUR
+	private int mConnectTimeLimit = mConnectTimeLimitScreenOn;						// Limit times, default set as ScreenOn
+
 
 	//=================================================================//
 	//																   //
@@ -240,7 +243,59 @@ public class BluetoothLeIndependentService extends Service
 	private final IBinder mBinder = new LocalBinder();
 	private final Handler mHandler = new Handler();
 
+	// For Keyless
+	// OS may enter sleep mode after screen off in minutes
+	// So we register a receiver to listen for screen ON/OFF
+	// And set a limit times for connecting
+	private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver()
+	{
+		@Override
+		public void onReceive(Context context, Intent intent)
+		{
+			// Check re-connect setting is enabled
+			if(!mAutoConnectOnDisconnect)
+				return;
 
+			if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF))
+			{
+				//LogUtil.d(TAG, "Screen OFF",Thread.currentThread().getStackTrace());
+
+				mConnectTimeLimit = mConnectTimeLimitScreenOff;
+
+				// Terminate original thread
+				if(mThreadConnect != null)
+				{
+					mThreadConnect.interrupt();
+				}
+
+				// Delay to start new thread to avoid state error
+				mHandler.postDelayed(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						if(mThreadConnect == null)
+						{
+							connectDevice();
+						}
+					}
+				},2000);
+			}
+			else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON))
+			{
+				//LogUtil.d(TAG, "Screen ON",Thread.currentThread().getStackTrace());
+
+				mConnectTimeLimit = mConnectTimeLimitScreenOn;
+
+				if(mThreadConnect == null)
+				{
+					connectDevice();
+				}
+			}
+
+			LogUtil.d(TAG,"Connection time limit = "+mConnectTimeLimit,Thread.currentThread().getStackTrace());
+		}
+	};
 
 	// Bonding receiver, handle bond message
 	private BroadcastReceiver mBondingBroadcastReceiver = new BroadcastReceiver()
@@ -726,14 +781,13 @@ public class BluetoothLeIndependentService extends Service
 								return;
 							}
 
+							disconnect(false);  //MODE_BLE_DISCONNECT
 							if(mInputDeviceProfile != null && mInputDeviceProfile.getConnectionState(mBluetoothDevice) == BluetoothProfile.STATE_CONNECTED)
 							{
 								appendLog("closeBTConnection");
 								closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
 							}
-
-                            disconnect(false);  //MODE_BLE_DISCONNECT
-                        }
+						}
                         break;
 
                         case MODE_CONTROL_COMMAND:
@@ -843,6 +897,12 @@ public class BluetoothLeIndependentService extends Service
 		registerReceiver(mBondingBroadcastReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
 
 
+		// Register screen on and off receiver
+		final IntentFilter screenStateFilter = new IntentFilter();
+		screenStateFilter.addAction(Intent.ACTION_SCREEN_ON);
+		screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
+		registerReceiver(mScreenStateReceiver, screenStateFilter);
+
 		// Auto start scan if KeyLess and AutoConnect are enabled
 		if( initialize() )
 		{
@@ -870,6 +930,10 @@ public class BluetoothLeIndependentService extends Service
 		{
 			unregisterReceiver(mMessageFromUiReceiver);
 			unregisterReceiver(mBondingBroadcastReceiver);
+
+			unregisterReceiver(mScreenStateReceiver);
+
+			closeProfileProxy();
 		}
 		catch (Exception e)
 		{
@@ -1276,8 +1340,16 @@ public class BluetoothLeIndependentService extends Service
 	}
 
 
+	// Connect to current device
+	public void connectDevice()
+	{
+		if(mBluetoothDevice != null)
+		{
+			connectDevice(mBluetoothDevice.getAddress());
+		}
+	}
 
-	// For non member function calls,bonding or connect
+	// init connection with address
 	public void connectDevice(final String address)
 	{
 		LogUtil.d(TAG,"[Process] connectDevice address : "+address,Thread.currentThread().getStackTrace());
@@ -1312,6 +1384,7 @@ public class BluetoothLeIndependentService extends Service
 				if(isBluetoothDeviceCached(address))
 				{
 					LogUtil.d(getPackageName(),"Device cached",Thread.currentThread().getStackTrace());
+					setupBluetoothDeviceFromCache(address);
 				}
 				else
 				{
@@ -1388,16 +1461,17 @@ public class BluetoothLeIndependentService extends Service
 				public void run()
 				{
 
-					int bondTimes = 0;
+					int tryTimes = 0;
 					boolean gotException = false;
 
 					while(!gotException																			// No exception
 							&& mBluetoothAdapter.isEnabled()													// Bluetooth enabled
 							&& getConnectedBluetoothDevice(address) == null										// Device not connected
-							&& (mConnectTimeLimit<0 || bondTimes<mConnectTimeLimit) )						// unLimit connect or Connect times under limit
+							&& (mConnectTimeLimit<0 || tryTimes<mConnectTimeLimit) )						// No limit or times under limit
 					{
 						try
 						{
+							// Get bond device set from BluetoothAdapter, make sure device is bond
 							final Set<BluetoothDevice> bondDeviceSet = mBluetoothAdapter.getBondedDevices();
 							boolean bond = false;
 							for(BluetoothDevice bluetoothDevice:bondDeviceSet)
@@ -1410,18 +1484,20 @@ public class BluetoothLeIndependentService extends Service
 								}
 							}
 
+							// if bond, start connecting
 							if(bond)
 							{
-								LogUtil.d(getPackageName(),"Device not connected, start connect "+bondTimes,Thread.currentThread().getStackTrace());
-								bondTimes++;
+								LogUtil.d(getPackageName(),"Device not connected, start connect "+tryTimes,Thread.currentThread().getStackTrace());
+								tryTimes++;
 								createBTConnection();
 							}
+							// Device un-bond
 							else
 							{
-								LogUtil.d(getPackageName(),"Device not bond!! It was already unbond.",Thread.currentThread().getStackTrace());
+								LogUtil.d(getPackageName(),"Device not bonded!! It was already un-bond.",Thread.currentThread().getStackTrace());
 								break;
 							}
-							Thread.sleep(2000);
+							Thread.sleep(KEYLESS_CONNECT_INTERVAL);
 						}
 						catch (InterruptedException e)
 						{
@@ -1430,7 +1506,7 @@ public class BluetoothLeIndependentService extends Service
 						}
 					}
 					mThreadConnect = null;
-					LogUtil.d(getPackageName(),"Leaving initConnection loop.",Thread.currentThread().getStackTrace());
+					LogUtil.d(getPackageName(),"Leaving _connect loop.",Thread.currentThread().getStackTrace());
 				}
 			};
 
@@ -1804,7 +1880,14 @@ public class BluetoothLeIndependentService extends Service
 		mBluetoothAdapter.getProfileProxy(context, mProfileListener, INPUT_DEVICE);
 	}
 
-
+	private void closeProfileProxy()
+	{
+		LogUtil.d(TAG,"closeProfileProxy",Thread.currentThread().getStackTrace());
+		if(mInputDeviceProfile != null)
+		{
+			mBluetoothAdapter.closeProfileProxy(getInputDeviceHiddenConstant(), mInputDeviceProfile);
+		}
+	}
 
     //*****************************************************************//
     //  Process flow function                                          //
@@ -1917,12 +2000,6 @@ public class BluetoothLeIndependentService extends Service
 				mHandler.removeCallbacksAndMessages(null);
 				mBluetoothGatt = null;
 				return;
-			}
-
-			// If autoConnect is enabled or is tuning key less, re-connect it
-			if(mAutoConnectOnDisconnect)
-			{
-				reConnectAfterMilliSeconds(2000); // Re-connect if AutoConnect or KeyLessTuning is enabled
 			}
 		}
 		catch (Exception e)
@@ -2650,6 +2727,7 @@ public class BluetoothLeIndependentService extends Service
 		if(bluetoothDevice == null)
 			return;
 
+		boolean removeFromCachedList = false;
 		if(mConnectedDeviceList != null)
 		{
 			for(int i=0;i<mConnectedDeviceList.size();i++)
@@ -2659,7 +2737,9 @@ public class BluetoothLeIndependentService extends Service
 				{
 					mConnectedDeviceList.remove(i);
 
-					removeBluetoothDeviceFromCache(device.getAddress());
+					removeFromCachedList = removeBluetoothDeviceFromCache(device.getAddress());
+
+					break;
 				}
 			}
 		}
@@ -2677,7 +2757,24 @@ public class BluetoothLeIndependentService extends Service
 			mDeviceInitState = INIT_STATE_BOND_OK;
 
 			createBTConnection();
+			return;
+		}
 
+		// If autoConnect is enabled or is tuning key less, re-connect it
+		if(mAutoConnectOnDisconnect)
+		{
+			mHandler.postDelayed(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					LogUtil.d(TAG,"Re-Connect in removeConnectedBluetoothDevice callback",Thread.currentThread().getStackTrace());
+					if(mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
+					{
+						connectDevice();
+					}
+				}
+			},3000);
 		}
 	}
 
@@ -2746,11 +2843,12 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	public void removeBluetoothDeviceFromCache(final String address)
+	public boolean removeBluetoothDeviceFromCache(final String address)
 	{
 		if(address == null)
-			return;
+			return false;
 
+		boolean containDevice = false;
 		if(mCachedDeviceList != null)
 		{
 			for(int i=0;i<mCachedDeviceList.size();i++)
@@ -2760,9 +2858,13 @@ public class BluetoothLeIndependentService extends Service
 				if(bluetoothDevice != null && bluetoothDevice.getAddress().equals(address))
 				{
 					mCachedDeviceList.remove(i);
+
+					containDevice = true;
 				}
 			}
 		}
+
+		return  containDevice;
 	}
 
 	public void clearCachedBluetoothDevice()
@@ -2898,7 +3000,7 @@ public class BluetoothLeIndependentService extends Service
 		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_APP_SETTING,dataString).apply();
 	}
 
-	private byte[] readBleSetting()
+	public byte[] readBleSetting()
 	{
 		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
 		final String encodeString =  sharedPreferences.getString(Constants.CONFIG_ITEM_BLE_SETTING,"");
@@ -2906,7 +3008,7 @@ public class BluetoothLeIndependentService extends Service
 
 		if(data == null || data.length == 0)
 		{
-			data = new byte[12];
+			data = new byte[13];
 		}
 		return data;
 	}

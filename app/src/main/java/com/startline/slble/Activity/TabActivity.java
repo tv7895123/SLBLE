@@ -37,8 +37,6 @@ import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 import com.startline.slble.Util.LogUtil;
 
-import java.util.ArrayList;
-
 import static com.startline.slble.Service.BluetoothLeIndependentService.*;
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -59,7 +57,7 @@ public class TabActivity extends FragmentActivity
 	public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 	private final String DEVICE_CONNECT_TAG = "Debug";
 	private final String DEVICE_STATUS_TAG = "Status";
-	public static final boolean SUPPORT_MULTI_DEVICE = false;
+	public static final boolean SUPPORT_MULTI_DEVICE = true;
 
 	//*****************************************************************//
 	//  Global Variables                                               //
@@ -97,19 +95,7 @@ public class TabActivity extends FragmentActivity
 		public void onServiceConnected(ComponentName componentName, IBinder service)
 		{
 			mBluetoothLeService = ((BluetoothLeIndependentService.LocalBinder) service).getService();
-			if (!mBluetoothLeService.initialize())
-			{
-				Log.e(TAG, "Unable to initialize Bluetooth");
-				//Toast.makeText(DeviceControlActivity.this,"Unable to initialize Bluetooth",Toast.LENGTH_LONG).show();
-				finish();
-			}
-
-
-			mTabHost.setCurrentTab(1);
-
-			// Automatically connects to the device upon successful start-up initialization.
-			mBluetoothLeService.connectDevice(mDeviceAddress);
-			mAutoScrollDown = mBluetoothLeService.getAutoScroll();
+			actionOnServiceConnected();
 		}
 
 		@Override
@@ -331,8 +317,10 @@ public class TabActivity extends FragmentActivity
 
 		setupViews();
 
-		final Intent gattServiceIntent = new Intent(this, BluetoothLeIndependentService.class);
-		bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+		initService();
+
+//		final Intent gattServiceIntent = new Intent(this, BluetoothLeIndependentService.class);
+//		bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
 		registerReceiver(mNotifyMessageReceiver, makeIntentFilter());
 	}
@@ -370,15 +358,13 @@ public class TabActivity extends FragmentActivity
 		{
 			mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
 			mBluetoothLeService.disconnect(false);
-			unbindService(mServiceConnection);
-			mBluetoothLeService = null;
 		}
 		else
 		{
 			mBluetoothLeService.setupBluetoothDeviceFromCache("");
-			unbindService(mServiceConnection);
-			mBluetoothLeService = null;
 		}
+		//unbindService(mServiceConnection);
+		mBluetoothLeService = null;
 		//stopService(new Intent().setClass(this,BluetoothLeIndependentService.class));
 	}
 
@@ -419,6 +405,49 @@ public class TabActivity extends FragmentActivity
 	private void setConnected(final boolean connected)
 	{
 		notifyDeviceConnected(connected);
+	}
+
+	private void initService()
+	{
+		int delayTime = 0;
+
+		// If service is not running , start it
+		if(isServiceRunning(BluetoothLeIndependentService.class) == false)
+		{
+			final Intent intent = new Intent();
+			intent.setClass(context, BluetoothLeIndependentService.class);
+			startService(intent);
+			delayTime = 500;
+		}
+
+		mHandler.postDelayed(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				mBluetoothLeService = BluetoothLeIndependentService.getInstance();
+				if(mBluetoothLeService != null)
+				{
+					actionOnServiceConnected();
+				}
+			}
+		},delayTime);
+	}
+
+	private void actionOnServiceConnected()
+	{
+		if (!mBluetoothLeService.initialize())
+		{
+			Log.e(TAG, "Unable to initialize Bluetooth");
+			//Toast.makeText(DeviceControlActivity.this,"Unable to initialize Bluetooth",Toast.LENGTH_LONG).show();
+			finish();
+		}
+
+		mTabHost.setCurrentTab(1);
+
+		// Automatically connects to the device upon successful start-up initialization.
+		mBluetoothLeService.connectDevice(mDeviceAddress);
+		mAutoScrollDown = mBluetoothLeService.getAutoScroll();
 	}
 
 	private void setupViews()
@@ -519,6 +548,22 @@ public class TabActivity extends FragmentActivity
 		intentFilter.addAction(ACTION_SERVICE_NOTIFY_UI);
 		intentFilter.addAction(ACTION_DEBUG_SERVICE_TO_UI);
 		return intentFilter;
+	}
+
+	protected boolean isServiceRunning(Class serviceClass)
+	{
+		boolean running = false;
+		ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+
+		for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE))
+		{
+			if (serviceClass.getName().equalsIgnoreCase(service.service.getClassName())
+					&& service.service.getPackageName().equalsIgnoreCase(context.getPackageName()))
+			{
+				running = true;
+			}
+		}
+		return running;
 	}
 
 	//==============================================================================

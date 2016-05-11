@@ -262,7 +262,8 @@ public class DeviceListActivity extends Activity
 	{
         super.onPause();
 
-		btnStop.performClick();
+		if(mIsScanning)
+			btnStop.performClick();
 
 		unregisterReceiver(mDebugDataReceiver);
 
@@ -279,10 +280,10 @@ public class DeviceListActivity extends Activity
 	protected void onDestroy()
 	{
 		super.onDestroy();
-		if(isServiceRunning(BluetoothLeIndependentService.class) == true)
-		{
-			stopBluetoothLeService();
-		}
+//		if(isServiceRunning(BluetoothLeIndependentService.class) == true)
+//		{
+//			stopBluetoothLeService();
+//		}
 	}
 
 	@Override
