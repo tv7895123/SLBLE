@@ -3015,7 +3015,7 @@ public class BluetoothLeIndependentService extends Service
 
 		if(data == null || data.length == 0)
 		{
-			data = new byte[13];
+			data = new byte[16];
 		}
 		return data;
 	}
