@@ -2857,16 +2857,16 @@ public class BluetoothLeIndependentService extends Service
 		{
 			for(int i=0;i<mCachedDeviceList.size();i++)
 			{
-				final CachedBluetoothDevice cachedIvLinkDevice = mCachedDeviceList.get(i);
-				final BluetoothDevice bluetoothDevice = cachedIvLinkDevice.bluetoothDevice;
+				final CachedBluetoothDevice cachedDevice = mCachedDeviceList.get(i);
+				final BluetoothDevice bluetoothDevice = cachedDevice.bluetoothDevice;
 				if(bluetoothDevice != null && bluetoothDevice.getAddress().equals(address))
 				{
 					mCachedDeviceList.remove(i);
 
 					containDevice = true;
 
-					cachedIvLinkDevice.bluetoothGatt.disconnect();
-					cachedIvLinkDevice.bluetoothGatt.close();
+					cachedDevice.bluetoothGatt.disconnect();
+					cachedDevice.bluetoothGatt.close();
 				}
 			}
 		}
