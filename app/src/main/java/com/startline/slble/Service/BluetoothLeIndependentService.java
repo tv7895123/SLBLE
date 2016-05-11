@@ -297,7 +297,7 @@ public class BluetoothLeIndependentService extends Service
 		}
 	};
 
-	// Bonding receiver, handle bond message
+	// Bonding receiver, handle bonding message
 	private BroadcastReceiver mBondingBroadcastReceiver = new BroadcastReceiver()
 	{
 		@Override
@@ -1361,7 +1361,7 @@ public class BluetoothLeIndependentService extends Service
 			return;
 		}
 
-		// Get device from adapter
+		// init mBluetoothDevice , get device from adapter
 		setBluetoothDevice(mBluetoothAdapter.getRemoteDevice(address));
 		if (mBluetoothDevice == null)
 		{
@@ -2514,35 +2514,6 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-    private Intent getScanResultIntent()
-    {
-        final Intent intent = new Intent();
-        final ArrayList<BleSerializableDevice> deviceList = new ArrayList<BleSerializableDevice>();
-        for(int i=0 ;i<mBleDeviceRssiAdapter.getCount(); i++)
-        {
-            final BleDeviceRssi deviceRssi = mBleDeviceRssiAdapter.getDevice(i);
-            final BleSerializableDevice simpleBleDevice = new BleSerializableDevice();
-            final String nameUTF8 = deviceRssi.nameUTF8;
-            simpleBleDevice.rssi = deviceRssi.rssi;
-            simpleBleDevice.name = (nameUTF8 != null) ? nameUTF8 :  deviceRssi.bluetoothDevice.getName();
-            simpleBleDevice.address = deviceRssi.bluetoothDevice.getAddress();
-
-            deviceList.add(simpleBleDevice);
-        }
-        intent.putExtra("param",PARAM_SCAN_RESULT);
-        intent.putExtra("device_scanned",deviceList);
-
-		final Message message = new Message();
-		message.arg1 = PARAM_SCAN_RESULT;
-		message.obj = deviceList;
-		if(mIpcCallbackHandler != null)
-		{
-			mIpcCallbackHandler.sendMessage(message);
-		}
-
-        return intent;
-    }
-
     private Intent getGattIntent(final int param)
     {
         final Intent intent = new Intent();
@@ -2607,23 +2578,6 @@ public class BluetoothLeIndependentService extends Service
         intent.putExtra("step",step);
         return intent;
 	}
-
-    private void broadcastCharacteristicData(final String action,byte[] dataArray)
-	{
-        final Intent intent = new Intent(action);
-
-
-        // writes the data formatted in HEX.
-        if (dataArray != null && dataArray.length > 0)
-        {
-            intent.putExtra(EXTRA_DATA, new String(dataArray));
-
-            String binaryData = ("******************* Data *******************") + NEW_LINE_CHARACTER + formatByteArrayToLog(dataArray)+ NEW_LINE_CHARACTER + "********************************************";
-            intent.putExtra(EXTRA_BINARY_DATA, formatReceiveString(binaryData));
-        }
-
-        broadcastIntent(intent);
-    }
 
     // Register a receiver to receive message from UI activity
 	private void registerBleOperateReceiver()
