@@ -93,7 +93,7 @@ public class BluetoothLeIndependentService extends Service
 	public static final long TIMEOUT_TASK_RETRY = 3 * 1000;
 	public static final String KEYWORD_SLBLE = "SLBLE";
 	private static final String FILTER_ADDRESS = "48:36:5F";
-	private final String UUID_BLE_SERVICE = "0000FFF0-0000-1000-8000-00805F9B34FB";
+	private final String UUID_SERVICE_ROOT = "0000FFF0-0000-1000-8000-00805F9B34FB";
 	private final String UUID_BLE_NOTIFY_CHANNEL = "0000FFF1-0000-1000-8000-00805F9B34FB";
 	private final String UUID_BLE_WRITE_CHANNEL = "0000FFF2-0000-1000-8000-00805F9B34FB";
 	public static final String EXTRA_DATA = "EXTRA_DATA";
@@ -195,7 +195,7 @@ public class BluetoothLeIndependentService extends Service
 	private BluetoothDevice mBluetoothDevice;
 	private BluetoothGatt mBluetoothGatt;
 	private BleDeviceRssiAdapter mBleDeviceRssiAdapter;
-	private BluetoothGattService mBleService;
+	private BluetoothGattService mRootService;
 	private BluetoothGattCharacteristic mNotifyCharacteristic;
 	private BluetoothGattCharacteristic mReadCharacteristic;
 	private BluetoothGattCharacteristic mWriteCharacteristic;
@@ -412,7 +412,7 @@ public class BluetoothLeIndependentService extends Service
 					// Check bluetoothGatt is avilable
 					if (mBluetoothGatt != null)
 					{
-						mBluetoothGatt.readRemoteRssi();
+						getBluetoothGatt().readRemoteRssi();
 						mHandler.postDelayed(readRssiRunnable, mReadRssiInterval);
 					}
 					else
@@ -463,7 +463,14 @@ public class BluetoothLeIndependentService extends Service
 		{
 			try
 			{
-				//appendLog(String.format("Connection State = %d,  Status = %d ", newState, status));
+				if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+				{
+					LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+					return;
+				}
+
+				appendLog(String.format("Connection State = %d,  Status = %d ", newState, status));
+				LogUtil.d(TAG, "[Process] onConnectionStateChange : " + newState,Thread.currentThread().getStackTrace());
 
 				if (newState == BluetoothProfile.STATE_CONNECTED)
 				{
@@ -493,6 +500,12 @@ public class BluetoothLeIndependentService extends Service
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status)
 		{
+			if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			LogUtil.d(TAG, "[Process] onServicesDiscovered received: " + status,Thread.currentThread().getStackTrace());
 			appendLog("[Process] onServicesDiscovered received: " + status);
 			try
@@ -503,7 +516,7 @@ public class BluetoothLeIndependentService extends Service
 
 					if (getConnectionState() == BluetoothProfile.STATE_CONNECTED)
 					{
-						if (isNotificationEnabled(getNotifyGattCharacteristic()) == false)
+						if (isNotificationEnabled(getNotifyGattCharacteristic(getRootService())) == false)
 						{
 							// Enable notify
 							startListening();
@@ -538,6 +551,11 @@ public class BluetoothLeIndependentService extends Service
 		@Override
 		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
 		{
+			if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				return;
+			}
 			LogUtil.d(TAG, "[Process] onCharacteristicRead received: " + status,Thread.currentThread().getStackTrace());
 			try
 			{
@@ -582,6 +600,12 @@ public class BluetoothLeIndependentService extends Service
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
 		{
+			if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			LogUtil.d(TAG, "[Process] onCharacteristicChanged",Thread.currentThread().getStackTrace());
 			try
 			{
@@ -597,6 +621,12 @@ public class BluetoothLeIndependentService extends Service
 		@Override
 		public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
 		{
+			if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			LogUtil.d(TAG, "[Process] onDescriptorWrite : " + status,Thread.currentThread().getStackTrace());
 			appendLog("[Process] onDescriptorWrite : " + status);
 			try
@@ -650,6 +680,12 @@ public class BluetoothLeIndependentService extends Service
 		@Override
 		public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status)
 		{
+			if(mBluetoothDevice == null || !gatt.getDevice().getAddress().equals(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Not match address : %s , Current = %s",gatt.getDevice().getAddress(),(mBluetoothDevice == null || mBluetoothDevice.getAddress() == null)? "null":mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			if (status == BluetoothGatt.GATT_SUCCESS)
 			{
 				if (rssi < 0)
@@ -996,6 +1032,10 @@ public class BluetoothLeIndependentService extends Service
 
 	public void setupBluetoothDeviceFromCache(final String address)
 	{
+		mRootService = null;
+		mNotifyCharacteristic = null;
+		mWriteCharacteristic = null;
+
 		// Get device form cache
 		final CachedBluetoothDevice cachedBluetoothDevice = getCachedBluetoothDevice(address);
 		if(cachedBluetoothDevice != null)
@@ -1007,12 +1047,12 @@ public class BluetoothLeIndependentService extends Service
 			// Set as connected
 			mConnectionState = BluetoothProfile.STATE_CONNECTED;
 
-			// Request Csta to show right status
-			sendRequestCsta();
-
 			// Notify UI
 			broadcastNotifyUi(getGattIntent(PARAM_GATT_CONNECTED)); // notify Connect fragment
 			broadcastNotifyUi(getProcessStepIntent(INIT_STATE_END));		// notify Status fragment
+
+			// Request Csta to show right status
+			sendRequestCsta();
 		}
 		else
 		{
@@ -1078,54 +1118,61 @@ public class BluetoothLeIndependentService extends Service
 		mBluetoothDevice = bluetoothDevice;
 	}
 
-	private BluetoothGattCharacteristic getNotifyGattCharacteristic()
+	private BluetoothGattCharacteristic getNotifyGattCharacteristic(final BluetoothGattService service)
 	{
 	 	if(mNotifyCharacteristic == null)
 		{
-			mNotifyCharacteristic = getCharacteristic(UUID_BLE_NOTIFY_CHANNEL);
+			mNotifyCharacteristic = getCharacteristic(service,UUID_BLE_NOTIFY_CHANNEL);
 		}
 
 		return mNotifyCharacteristic;
 	}
 
-	private BluetoothGattCharacteristic getWriteGattCharacteristic()
+	private BluetoothGattCharacteristic getWriteGattCharacteristic(final BluetoothGattService service)
 	{
 	 	if(mWriteCharacteristic == null)
 		{
-			mWriteCharacteristic = getCharacteristic(UUID_BLE_WRITE_CHANNEL);
+			mWriteCharacteristic = getCharacteristic(service,UUID_BLE_WRITE_CHANNEL);
 		}
 
 		return mWriteCharacteristic;
 	}
 
-	private BluetoothGattCharacteristic getCharacteristic(final String uuid)
+	private BluetoothGattCharacteristic getCharacteristic(final BluetoothGattService bluetoothGattService,final String uuid)
 	{
-		if(getBleService() == null) return null;
+		if(bluetoothGattService == null) return null;
 
-		return getBleService().getCharacteristic(UUID.fromString(uuid));
+		return bluetoothGattService.getCharacteristic(UUID.fromString(uuid));
 	}
 
-	private BluetoothGattService getBleService()
+	private BluetoothGattService getService(final String uuid)
 	{
-		if(mBleService == null)
+		if(uuid == null || uuid.length() == 0) return null;
+
+		final List<BluetoothGattService> serviceList = getSupportedGattServices();
+		if( serviceList != null)
 		{
-			final List<BluetoothGattService> serviceList = getSupportedGattServices();
-			if( serviceList != null)
+			for(int i=0;i<serviceList.size();i++)
 			{
-				for(int i=0;i<serviceList.size();i++)
+				final BluetoothGattService service = serviceList.get(i);
+				final String serviceUuid = service.getUuid().toString();
+				if(serviceUuid.equalsIgnoreCase(uuid))
 				{
-					final BluetoothGattService service = serviceList.get(i);
-					final String uuid = service.getUuid().toString();
-					if(uuid.equalsIgnoreCase(UUID_BLE_SERVICE))
-					{
-						mBleService = service;
-						break;
-					}
+					return service;
 				}
 			}
 		}
+		return null;
+	}
 
-		return mBleService;
+	private BluetoothGattService getRootService()
+	{
+		if(mRootService == null)
+		{
+			mRootService = getService(UUID_SERVICE_ROOT);
+		}
+
+		return mRootService;
 	}
 
     private boolean isDeviceInitialized()
@@ -1372,6 +1419,7 @@ public class BluetoothLeIndependentService extends Service
 		// If device not bonded, start bonding
 		if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
 		{
+			appendLog("Not bonded");
 			_bondingDevice();
 		}
 		// Device bonded, try to connect to it
@@ -1380,16 +1428,18 @@ public class BluetoothLeIndependentService extends Service
 			// Connected with OS
 			if(isBluetoothDeviceConnected(address))
 			{
+				appendLog("Connected with OS");
 				// Cached with App
 				if(isBluetoothDeviceCached(address))
 				{
 					LogUtil.d(getPackageName(),"Device cached",Thread.currentThread().getStackTrace());
+					appendLog("Device cached");
 					setupBluetoothDeviceFromCache(address);
 				}
 				else
 				{
 					LogUtil.d(getPackageName(),"Device connected not cached with app, start binding ",Thread.currentThread().getStackTrace());
-
+					appendLog("Device not cached");
 					// Connected,not cached, start bind it with app
 					_bind();
 				}
@@ -1397,6 +1447,7 @@ public class BluetoothLeIndependentService extends Service
 			// Not connected
 			else
 			{
+				appendLog("Not connected with OS");
 				// start connect
 				_connect();
 			}
@@ -1587,7 +1638,7 @@ public class BluetoothLeIndependentService extends Service
 			if(mBluetoothGatt != null)
 			{
 				mConnectionState = BluetoothProfile.STATE_DISCONNECTING;
-				mBluetoothGatt.disconnect();
+				getBluetoothGatt().disconnect();
 				appendLog("Disconnecting");
 			}
 			else
@@ -1667,10 +1718,10 @@ public class BluetoothLeIndependentService extends Service
 	{
         if (mBluetoothGatt != null)
 		{
-            mBluetoothGatt.close();
+            getBluetoothGatt().close();
         }
 
-		mBleService = null;
+		mRootService = null;
 		mBluetoothGatt = null;
 
 		mNotifyCharacteristic = null;
@@ -1733,7 +1784,7 @@ public class BluetoothLeIndependentService extends Service
             LogUtil.d(TAG, "[Process] BluetoothAdapter not initialized",Thread.currentThread().getStackTrace());
             return;
         }
-        mBluetoothGatt.readCharacteristic(characteristic);
+        getBluetoothGatt().readCharacteristic(characteristic);
     }
 
 	public void writeCharacteristic(BluetoothGattCharacteristic characteristic)
@@ -1743,7 +1794,7 @@ public class BluetoothLeIndependentService extends Service
             LogUtil.d(TAG, "[Process] BluetoothAdapter not initialized",Thread.currentThread().getStackTrace());
 			return;
 		}
-        mBluetoothGatt.writeCharacteristic(characteristic);
+        getBluetoothGatt().writeCharacteristic(characteristic);
     }
 
 
@@ -1771,14 +1822,13 @@ public class BluetoothLeIndependentService extends Service
             LogUtil.d(TAG, "[Process] BluetoothAdapter not initialized",Thread.currentThread().getStackTrace());
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-		//mBluetoothGatt.reg
+        getBluetoothGatt().setCharacteristicNotification(characteristic, enabled);
 
 		final BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(BleGattAttributes.DESCRIPTORS_CLIENT_CHARACTERISTIC_CONFIGURATION));
 		if(descriptor != null)
 		{
 			descriptor.setValue(enabled?BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
-			mBluetoothGatt.writeDescriptor(descriptor);
+			getBluetoothGatt().writeDescriptor(descriptor);
 		}
 		else
 		{
@@ -1797,7 +1847,7 @@ public class BluetoothLeIndependentService extends Service
 	{
         if (mBluetoothGatt == null) return null;
 
-        return mBluetoothGatt.getServices();
+        return getBluetoothGatt().getServices();
     }
 
 	private void readDeviceNameFromServiceWithTimer()
@@ -1816,7 +1866,7 @@ public class BluetoothLeIndependentService extends Service
 
 	private void startListening()
 	{
-		if(getNotifyGattCharacteristic() != null)
+		if(getNotifyGattCharacteristic(getRootService()) != null)
 		{
 			LogUtil.d(TAG, "[Process] startListening",Thread.currentThread().getStackTrace());
 			appendLog("Start listening");
@@ -1958,7 +2008,7 @@ public class BluetoothLeIndependentService extends Service
 
 			// If services characteristics is empty,
 			// It is the first connect, update flow step and start discovery services
-			if(getBleService() == null)
+			if(getRootService() == null)
 			{
 				// Attempts to discover services after successful connection.
 				discoverServices();
@@ -2032,7 +2082,7 @@ public class BluetoothLeIndependentService extends Service
 						if (mBluetoothGatt != null)
 						{
 							mBluetoothAdapter.cancelDiscovery();
-							discoverSuccess = mBluetoothGatt.discoverServices();
+							discoverSuccess = getBluetoothGatt().discoverServices();
 							LogUtil.d(TAG, "[Connection] Attempting to start service discover:" + discoverSuccess,Thread.currentThread().getStackTrace());
 							appendLog(formatConnectionString("Attempting to start service discover:" + discoverSuccess));
 						}
@@ -2313,7 +2363,7 @@ public class BluetoothLeIndependentService extends Service
 	private void sendPlainData(final byte[] data)
 	{
 		appendLog(formatByteArrayToLog(data));
-		if(getWriteGattCharacteristic() != null)
+		if(getWriteGattCharacteristic(getRootService()) != null)
 		{
 			sendPacket(data);
 		}
@@ -2807,13 +2857,16 @@ public class BluetoothLeIndependentService extends Service
 		{
 			for(int i=0;i<mCachedDeviceList.size();i++)
 			{
-				final CachedBluetoothDevice device = mCachedDeviceList.get(i);
-				final BluetoothDevice bluetoothDevice = device.bluetoothDevice;
+				final CachedBluetoothDevice cachedIvLinkDevice = mCachedDeviceList.get(i);
+				final BluetoothDevice bluetoothDevice = cachedIvLinkDevice.bluetoothDevice;
 				if(bluetoothDevice != null && bluetoothDevice.getAddress().equals(address))
 				{
 					mCachedDeviceList.remove(i);
 
 					containDevice = true;
+
+					cachedIvLinkDevice.bluetoothGatt.disconnect();
+					cachedIvLinkDevice.bluetoothGatt.close();
 				}
 			}
 		}

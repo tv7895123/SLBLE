@@ -14,6 +14,14 @@ import com.startline.slble.Util.LogUtil;
 
 /**
  * Created by terry on 2016/1/25.
+ * For stabling bluetooth connection in APP, APP must bind after OS connect to bluetooth
+ * Ex. Bluetooth connected with OS, APP receive ACL_CONNECTED message then APP start binding
+ *
+ * To improve bonding process in APP, register a receiver to listen bluetooth ACL messages:
+ * 1.Auto start BluetoothLeIndentService when bluetooth turned on
+ * 2.Clear connected and cached device list when bluetooth turned off
+ * 3.Receive ACL_CONNECTED message, add device to lists and start binding
+ * 4.Receive ACL_DISCONNECTED message, remove device from lists
  */
 public class BluetoothReceiver extends BroadcastReceiver
 {

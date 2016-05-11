@@ -358,13 +358,13 @@ public class TabActivity extends FragmentActivity
 		{
 			mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
 			mBluetoothLeService.disconnect(false);
+			mBluetoothLeService = null;
 		}
 		else
 		{
 			mBluetoothLeService.setupBluetoothDeviceFromCache("");
 		}
 		//unbindService(mServiceConnection);
-		mBluetoothLeService = null;
 		//stopService(new Intent().setClass(this,BluetoothLeIndependentService.class));
 	}
 
