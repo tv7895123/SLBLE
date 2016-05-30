@@ -613,6 +613,7 @@ public class BluetoothLeIndependentService extends Service
 					else if(characteristic.getUuid().toString().equalsIgnoreCase(CHAR_TX_POWER_LEVEL))
 					{
 						mTxPowerLevel = characteristic.getValue()[0];
+						appendLog(formatReceiveString(" " + mTxPowerLevel + " dB"));
 						LogUtil.d(TAG, "[Process] ]Read TxPower value : " + mTxPowerLevel,Thread.currentThread().getStackTrace());
 
 						final Message message = new Message();
