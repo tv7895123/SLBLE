@@ -1284,6 +1284,7 @@ public class BluetoothLeIndependentService extends Service
 					playLoginSuccessSound();
 					broadcastNotifyUi(getProcessStepIntent(INIT_STATE_END));
 					mDeviceInitState = INIT_STATE_END;
+					removeConnectionTimeout();
 
 					// After connecting and verified, add device to cache list
 					addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
@@ -1683,7 +1684,7 @@ public class BluetoothLeIndependentService extends Service
 
 			// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
 			setBluetoothGatt(mBluetoothDevice.connectGatt(context, false, mGattCallback));
-
+			setupConnectionTimeout(5*1000);
 			mAllowReConnect = true;
 		}
 		catch (Exception e)
@@ -2083,6 +2084,13 @@ public class BluetoothLeIndependentService extends Service
             appendLog(formatConnectionString("connected"));
 			LogUtil.d(TAG, "[Process] Connected to GATT server.",Thread.currentThread().getStackTrace());
 
+			if(mRunnableBondToConnect != null)
+			{
+				mHandler.removeCallbacks(mRunnableBondToConnect);
+				mRunnableBondToConnect = null;
+			}
+
+
 			// Record connection state
 			mConnectionState = BluetoothProfile.STATE_CONNECTED;
 
@@ -2135,6 +2143,11 @@ public class BluetoothLeIndependentService extends Service
 				mHandler.removeCallbacksAndMessages(null);
 				mBluetoothGatt = null;
 				return;
+			}
+
+			if(isBluetoothEnabled() && isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+			{
+				_bind();
 			}
 		}
 		catch (Exception e)
