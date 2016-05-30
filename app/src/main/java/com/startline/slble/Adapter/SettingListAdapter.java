@@ -115,6 +115,7 @@ public class SettingListAdapter extends BaseAdapter
                 case TYPE_GROUP:
                     convertView = layoutInflater.inflate(R.layout.list_item_group, null);
                     holder.title = (TextView)convertView.findViewById(R.id.txt_title);
+                    holder.value = (TextView)convertView.findViewById(R.id.txt_value);
                 break;
 
                 case TYPE_CHECKBOX:
@@ -148,7 +149,8 @@ public class SettingListAdapter extends BaseAdapter
 
             if(type == TYPE_TEXT)
             {
-                String value = (int)item.get("value")+"";
+                String value = (String)item.get("value");
+                holder.value.setTag(holder.title.getText().toString());
                 holder.value.setText(value);
                 holder.value.setEnabled(dataEnabled);
                 holder.checkBox.setVisibility(View.INVISIBLE);
@@ -173,6 +175,11 @@ public class SettingListAdapter extends BaseAdapter
                 if(onCheckedChangeListener != null)
                     holder.checkBox.setOnCheckedChangeListener(onCheckedChangeListener);
             }
+        }
+        else
+        {
+            String value = (String)item.get("value");
+            holder.value.setText(value);
         }
 
         return convertView;

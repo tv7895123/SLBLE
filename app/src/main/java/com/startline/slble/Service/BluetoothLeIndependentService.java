@@ -68,6 +68,16 @@ public class BluetoothLeIndependentService extends Service
 	private final String NEW_LINE_CHARACTER = "<BR/>";
 
 	public static final int CSTA_STA = 0;
+	public static final int[] TX_POWER_LEVEL = new int[]
+	{
+		-17,-15,-10,-5,0,2,4,7
+	};
+
+	//--------------------------------------------------------------------
+	// Ack Flag
+	public static final int ACK_FLAG_TX_POWER = 0x1;
+	public static final int ACK_FLAG_TX_POWER_KEYLESS = 0x2;
+
 
 	//--------------------------------------------------------------------
     // Connection State
@@ -126,6 +136,7 @@ public class BluetoothLeIndependentService extends Service
     //--------------------------------------------------------------------
 	// Notify UI thread
     public static final String ACTION_SERVICE_NOTIFY_UI = "ACTION_SERVICE_NOTIFY_UI";
+	public static final int PARAM_ERROR = 0x11;
 
     // For list activity
     public static final int PARAM_SCAN_RESULT = 0x0;
@@ -144,6 +155,10 @@ public class BluetoothLeIndependentService extends Service
     public static final int PARAM_GATT_READ_DEVICE_NAME = 0x204;
     public static final int PARAM_GATT_ON_DESCRIPTOR_WRITE = 0x205;
 
+	// Setting
+	public static final int PARAM_TX_POWER_LEVEL = 0x1001;
+	public static final int PARAM_KEYLESS_LEVEL = 0x1002;
+
     // Debug
 	public static final String ACTION_DEBUG_SERVICE_TO_UI = "ACTION_DEBUG_SERVICE_TO_UI";
     public static final int PARAM_ADV_DATA = 0;
@@ -157,11 +172,17 @@ public class BluetoothLeIndependentService extends Service
 	//=================================================================//
 	// Basic
     private final int RECEIVE_DATA_BUFFER_LENGTH = 100;
+	private int  mAckFlag = 0;
 
 	// App Setting
-	private int mobileNumber = 0;
 	private boolean mAutoConnectOnDisconnect = false;
 	private boolean mAutoScroll = false;
+
+	// Ble Setting
+	private int mobileNumber = 0;
+	private int mTxPowerLevel = 0;
+	private int txPowerKeylessLock = 0;
+	private int txPowerKeylessUnlock = 0;
 
 	// Allow reconnect
 	private boolean mAllowReConnect = true;
@@ -589,6 +610,16 @@ public class BluetoothLeIndependentService extends Service
 
                         initDeviceState();// Get device name
 					}
+					else if(characteristic.getUuid().toString().equalsIgnoreCase(CHAR_TX_POWER_LEVEL))
+					{
+						mTxPowerLevel = characteristic.getValue()[0];
+						LogUtil.d(TAG, "[Process] ]Read TxPower value : " + mTxPowerLevel,Thread.currentThread().getStackTrace());
+
+						final Message message = new Message();
+						message.arg1 = PARAM_TX_POWER_LEVEL;
+						message.obj = mTxPowerLevel;
+						sendCallbackMessage(message);
+					}
 				}
 			}
 			catch (Exception e)
@@ -923,7 +954,8 @@ public class BluetoothLeIndependentService extends Service
 		context = this;
 		serviceInstance = this;
 
-		getAppConfiguration();
+		loadAppSetting(readAppSetting());
+		loadBleSetting(readBleSetting());
 
 
 		// Register receiver
@@ -1000,12 +1032,32 @@ public class BluetoothLeIndependentService extends Service
 		mBluetoothGatt = bluetoothGatt;
 	}
 
+	private int getAckFlag()
+	{
+		return mAckFlag;
+	}
+
+	private void setAckFlag(final int flag)
+	{
+		mAckFlag = (mAckFlag & (~(0x1<<(flag-1)))) | flag;
+	}
+
+	private void clearAckFlag(final int flag)
+	{
+		mAckFlag = mAckFlag & (~(0x1<<(flag-1)));
+	}
+
+	private void clearAckFlag()
+	{
+		mAckFlag = 0;
+	}
+
 	public void setIpcCallbackhandler(final Handler callbackHandler)
 	{
 		mIpcCallbackHandler = callbackHandler;
 	}
 
-	public Handler getmIpcCallbackHandler()
+	public Handler getIpcCallbackHandler()
 	{
 		return mIpcCallbackHandler;
 	}
@@ -1028,6 +1080,21 @@ public class BluetoothLeIndependentService extends Service
 	public boolean getAutoScroll()
 	{
 		return mAutoScroll;
+	}
+
+	public int getTxPowerLevel()
+	{
+		return mTxPowerLevel;
+	}
+
+	public int getTxPowerKeylessLock()
+	{
+		return txPowerKeylessLock;
+	}
+
+	public int getTxPowerKeylessUnlock()
+	{
+		return txPowerKeylessUnlock;
 	}
 
 	public void setupBluetoothDeviceFromCache(final String address)
@@ -1078,12 +1145,10 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void getAppConfiguration()
+	private void loadAppSetting(final String appSetting)
 	{
-		final String appSetting = readAppSetting();
 		if(appSetting.isEmpty())
 		{
-			mobileNumber = 0;
 			setAutoConnectOnDisconnect(false);
 			setAutoScroll(false);
 		}
@@ -1092,7 +1157,6 @@ public class BluetoothLeIndependentService extends Service
 			try
 			{
 				JSONObject jsonObject = new JSONObject(appSetting);
-				mobileNumber = jsonObject.getInt(getString(R.string.title_mobile_number));
 				setAutoConnectOnDisconnect(jsonObject.get(getString(R.string.title_auto_connect)) == 1);
 				setAutoScroll(jsonObject.get(getString(R.string.title_auto_scroll)) == 1);
 			}
@@ -1100,6 +1164,20 @@ public class BluetoothLeIndependentService extends Service
 			{
 
 			}
+		}
+	}
+
+	private void loadBleSetting(final byte[] bleSetting)
+	{
+		try
+		{
+			mobileNumber = bleSetting[0] & 0x0F;
+			txPowerKeylessLock = bleSetting[1] & 0x0F;
+			txPowerKeylessUnlock = (bleSetting[1]>>4) & 0x0F;
+		}
+		catch (Exception e)
+		{
+
 		}
 	}
 
@@ -1175,7 +1253,7 @@ public class BluetoothLeIndependentService extends Service
 		return mRootService;
 	}
 
-    private boolean isDeviceInitialized()
+    public boolean isDeviceInitialized()
     {
         if(mDeviceInitState == INIT_STATE_END)
             return true;
@@ -1879,6 +1957,13 @@ public class BluetoothLeIndependentService extends Service
 		readFromCharacteristic(CHAR_DEVICE_NAME);
 	}
 
+	public void readTxPower()
+	{
+		LogUtil.d(TAG, "[Process] readTxPower",Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("readTxPower"));
+		readFromCharacteristic(CHAR_TX_POWER_LEVEL);
+	}
+
 	private void readFromCharacteristic(final String strCharacteristicUuid)
 	{
 		try
@@ -2185,6 +2270,12 @@ public class BluetoothLeIndependentService extends Service
 			{
 				LogUtil.d(TAG, "[Process] Receive ERROR_MESSAGE",Thread.currentThread().getStackTrace());
 				appendLog(formatErrorString("Receive ERROR_MESSAGE : 0x" + String.format("%02X", receiveData[PACKET_PARAMETER])));
+
+				clearAckFlag();
+
+				final Message message = new Message();
+				message.arg1 = PARAM_ERROR;
+				sendCallbackMessage(message);
 				return;
 			}
 
@@ -2204,7 +2295,20 @@ public class BluetoothLeIndependentService extends Service
 			{
 				case CMD_ACK:
 				{
-
+					final int ackFlag = getAckFlag();
+					if(ackFlag>0)
+					{
+						if((ackFlag & ACK_FLAG_TX_POWER) >0)
+						{
+							clearAckFlag(ACK_FLAG_TX_POWER);
+							readTxPower();
+						}
+						else if((ackFlag & ACK_FLAG_TX_POWER_KEYLESS) >0)
+						{
+							clearAckFlag(ACK_FLAG_TX_POWER_KEYLESS);
+							sendRequestBleSetting();
+						}
+					}
 				}
 				break;
 				case CMD_CAR_STATUS:
@@ -2233,7 +2337,16 @@ public class BluetoothLeIndependentService extends Service
                     // Receive response from device, check if data is match we sent before
 					if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_RESPONSE)
                     {
-						saveBleSetting(subByteArray(receiveData,3,16));
+						final byte[] data = subByteArray(receiveData,3,16);
+						loadBleSetting(data);
+
+						saveBleSetting(data);
+
+
+						final Message message = new Message();
+						message.arg1 = PARAM_KEYLESS_LEVEL;
+						message.obj = data[1];
+						sendCallbackMessage(message);
                     }
 				}
 				break;
@@ -2358,6 +2471,43 @@ public class BluetoothLeIndependentService extends Service
 		{
 			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
 		}
+	}
+
+	public void sendTxPowerLevel(final int index)
+	{
+		//final int level = TX_POWER_LEVEL[index];
+		sendKeylessLevel(PARAM_SET_NORMAL_LEVEL,index);
+		setAckFlag(ACK_FLAG_TX_POWER);
+	}
+
+	public void sendKeylessLevel(final int level)
+	{
+		sendKeylessLevel(PARAM_SET_KEYLESS_LEVEL,level);
+		setAckFlag(ACK_FLAG_TX_POWER_KEYLESS);
+	}
+
+	private void sendKeylessLevel(final int param,final int level)
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[PACKET_ID] = getRandom(255);
+		writeData[PACKET_COMMAND] = CMD_TX_POWER;
+		writeData[PACKET_PARAMETER] = (byte)param;
+
+		final byte[] data = new byte[16];
+		data[0] = (byte)level;
+		fillData(writeData,data);
+
+		// fill check sum
+		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+
+
+		final String s = formatByteArrayToLog(writeData);
+		LogUtil.d(TAG, " Send TxPower  : " + s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send TxPower  : " + String.format("0x%02X", level)));
+
+		sendPlainData(writeData);
 	}
 
 	private void sendPlainData(final byte[] data)
@@ -2524,6 +2674,14 @@ public class BluetoothLeIndependentService extends Service
         broadcastIntent(intent);
 	}
 
+	private void sendCallbackMessage(final Message message)
+	{
+		if(mIpcCallbackHandler != null)
+		{
+			mIpcCallbackHandler.sendMessage(message);
+		}
+	}
+
 
     //*****************************************************************//
     //  Broadcast  function                                            //
@@ -2558,10 +2716,7 @@ public class BluetoothLeIndependentService extends Service
 		final Message message = new Message();
 		message.arg1 = PARAM_SCAN_RESULT;
 		message.obj = deviceList;
-		if(mIpcCallbackHandler != null)
-		{
-			mIpcCallbackHandler.sendMessage(message);
-		}
+		sendCallbackMessage(message);
 	}
 
     private Intent getGattIntent(final int param)
@@ -2988,7 +3143,6 @@ public class BluetoothLeIndependentService extends Service
 		final JSONObject jsonObject = new JSONObject();
 		try
 		{
-			jsonObject.put(getString(R.string.title_mobile_number),mobileNumber);
 			jsonObject.put(getString(R.string.title_auto_connect),mAutoConnectOnDisconnect?1:0);
 			jsonObject.put(getString(R.string.title_auto_scroll),mAutoScroll?1:0);
 		}

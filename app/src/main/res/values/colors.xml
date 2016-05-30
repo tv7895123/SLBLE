@@ -5,6 +5,7 @@
     <color name = "black">#000000</color>
     <color name = "red">#FF0000</color>
     <color name = "white">#FFFFFF</color>
+    <color name = "blue">#0066FF</color>
 
     <drawable name = "dark_gray">#5F5F5F</drawable>
     <drawable name = "gray">#7F7F7F</drawable>

@@ -287,9 +287,16 @@ public class TabActivity extends FragmentActivity
 				return true;
 			case R.id.action_setting:
 			{
-				final Intent intent = new Intent();
-				intent.setClass(context,SettingListActivity.class);
-				startActivity(intent);
+				if(mBluetoothLeService != null && mBluetoothLeService.isDeviceInitialized())
+				{
+					final Intent intent = new Intent();
+					intent.setClass(context,SettingListActivity.class);
+					startActivity(intent);
+				}
+				else
+				{
+					Toast.makeText(context,"Device not connected",Toast.LENGTH_SHORT).show();
+				}
 			}
 			return true;
 
