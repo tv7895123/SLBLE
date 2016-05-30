@@ -196,19 +196,19 @@ public class SettingListActivity extends Activity
 						customPickDialog(getString(title),KEYLESS_LEVEL,level);
 					}
 				}
-				else if(title == R.string.title_tx_power)
-				{
-					if(service != null)
-					{
-						service.readTxPower();
-						mProgressDialog.setMessage("Read TX Power level, please wait.");
-						mProgressDialog.show();
-						mProgressDialog.setCancelable(false);
-
-						mHandler.removeCallbacks(runnableTimeout);
-						mHandler.postDelayed(runnableTimeout,5000);
-					}
-				}
+//				else if(title == R.string.title_tx_power)
+//				{
+//					if(service != null)
+//					{
+//						service.readTxPower();
+//						mProgressDialog.setMessage("Read TX Power level, please wait.");
+//						mProgressDialog.show();
+//						mProgressDialog.setCancelable(false);
+//
+//						mHandler.removeCallbacks(runnableTimeout);
+//						mHandler.postDelayed(runnableTimeout,5000);
+//					}
+//				}
 			}
 		});
 
@@ -219,7 +219,7 @@ public class SettingListActivity extends Activity
 			{
 				service = BluetoothLeIndependentService.getInstance();
 				service.setIpcCallbackhandler(mHandler);
-				service.readTxPower();
+				//service.readTxPower();
 
 				initTypeList();
 
@@ -285,14 +285,15 @@ public class SettingListActivity extends Activity
 					break;
 					case 3: // TX Power Group
 					{
-						if(service != null)
-						{
-							map.put("value",service.getTxPowerLevel() + " dB");
-						}
-						else
-						{
-							map.put("value","--");
-						}
+//						if(service != null)
+//						{
+//							map.put("value",service.getTxPowerLevel() + " dB");
+//						}
+//						else
+//						{
+//							map.put("value","--");
+//						}
+						map.put("value","");
 					}
 					break;
 //					case 4:	// Tx Power Level
