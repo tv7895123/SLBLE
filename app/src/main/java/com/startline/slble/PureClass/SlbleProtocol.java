@@ -75,6 +75,7 @@ public class SlbleProtocol
 	// CMD_SETTING_CAR_ALARM_FUNCTION   0x60
 	public static final int PARAM_SETTING_REQUEST = 0x00;
 	public static final int PARAM_SETTING_RESPONSE = 0x01;
+	public static final int PARAM_SETTING_WRITE = 0x02;
 
 
     //*****************************************************************//

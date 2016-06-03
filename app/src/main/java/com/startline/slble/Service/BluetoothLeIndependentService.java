@@ -156,8 +156,9 @@ public class BluetoothLeIndependentService extends Service
     public static final int PARAM_GATT_ON_DESCRIPTOR_WRITE = 0x205;
 
 	// Setting
+	public static final int PARAM_SETTING_INFORMATION = 0x1000;
 	public static final int PARAM_TX_POWER_LEVEL = 0x1001;
-	public static final int PARAM_KEYLESS_LEVEL = 0x1002;
+
 
     // Debug
 	public static final String ACTION_DEBUG_SERVICE_TO_UI = "ACTION_DEBUG_SERVICE_TO_UI";
@@ -174,6 +175,10 @@ public class BluetoothLeIndependentService extends Service
     private final int RECEIVE_DATA_BUFFER_LENGTH = 100;
 	private int  mAckFlag = 0;
 
+	// Connect
+	private boolean mAllowReBind = false;
+	private boolean mManualConnect = false;
+
 	// App Setting
 	private boolean mAutoConnectOnDisconnect = false;
 	private boolean mAutoScroll = false;
@@ -183,9 +188,7 @@ public class BluetoothLeIndependentService extends Service
 	private int mTxPowerLevel = 0;
 	private int txPowerKeylessLock = 0;
 	private int txPowerKeylessUnlock = 0;
-
-	// Allow reconnect
-	private boolean mAllowReConnect = true;
+	private int slaveTagCounter = 0;
 
 	// Process
 	private int mDeviceInitState = INIT_STATE_NONE;
@@ -196,7 +199,6 @@ public class BluetoothLeIndependentService extends Service
 	private byte[] mReceivedDataBuffer = null;
 	private int mReceiveDataCounter = 0;
 	private int mTaskRetry = 0;
-	private int mConnectRetry = 0;
 	private int mReadRssiInterval = READ_RSSI_INTERVAL;
 
 	// Keyless
@@ -230,6 +232,7 @@ public class BluetoothLeIndependentService extends Service
 	private boolean mBTConnectionRequest = false;
 	private Runnable mRunnableBondToConnect = null;
 	private static Thread mThreadConnect = null;
+	private static Runnable mRunnableConnectDevice = null;
 	//=================================================================//
 	//																   //
 	//  Custom  Class		                                           //
@@ -608,7 +611,7 @@ public class BluetoothLeIndependentService extends Service
 
 						mDeviceInitState = INIT_STATE_DEVICE_NAME;
 
-                        initDeviceState();// Get device name
+                        initDeviceState(INIT_STATE_INFORMATION);// Get device name
 					}
 					else if(characteristic.getUuid().toString().equalsIgnoreCase(CHAR_TX_POWER_LEVEL))
 					{
@@ -835,7 +838,9 @@ public class BluetoothLeIndependentService extends Service
 
 							if(mBluetoothDevice != null)
 							{
-								connectWithTimer(mBluetoothDevice.getAddress());  // Manual connect
+								removeConnectDeviceRunnable();
+								setManualConnect(true);
+								connectDevice(mBluetoothDevice.getAddress());  // Manual connect
 							}
                         }
                         break;
@@ -1098,6 +1103,16 @@ public class BluetoothLeIndependentService extends Service
 		return txPowerKeylessUnlock;
 	}
 
+	public int getSlaveTagCounter()
+	{
+		return slaveTagCounter;
+	}
+
+	public void setManualConnect(final boolean manual)
+	{
+		mManualConnect = manual;
+	}
+
 	public void setupBluetoothDeviceFromCache(final String address)
 	{
 		mRootService = null;
@@ -1168,13 +1183,14 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void loadBleSetting(final byte[] bleSetting)
+	public void loadBleSetting(final byte[] bleSetting)
 	{
 		try
 		{
 			mobileNumber = bleSetting[0] & 0x0F;
 			txPowerKeylessLock = bleSetting[1] & 0x0F;
 			txPowerKeylessUnlock = (bleSetting[1]>>4) & 0x0F;
+			slaveTagCounter = bleSetting[2] & 0x0F;
 		}
 		catch (Exception e)
 		{
@@ -1261,36 +1277,64 @@ public class BluetoothLeIndependentService extends Service
         else
             return false;
     }
-	private void initDeviceState()
+	private void initDeviceState(final int nextState)
 	{
 		try
 		{
+			int error = 0;
 			switch (mDeviceInitState)
 			{
 				case INIT_STATE_DEVICE_NAME:
 				{
-					sendRequestBleSetting();
-					mDeviceInitState = INIT_STATE_INFORMATION;
+					if(nextState == INIT_STATE_INFORMATION)
+					{
+						sendRequestBleSetting();
+						mDeviceInitState = INIT_STATE_INFORMATION;
+					}
+					else
+					{
+						error = 1;
+					}
 				}
 				break;
 
 				case INIT_STATE_INFORMATION:
 				{
-					sendRequestCsta();
-					mDeviceInitState = INIT_STATE_CSTA;
+					if(nextState == INIT_STATE_CSTA)
+					{
+						sendRequestCsta();
+						mDeviceInitState = INIT_STATE_CSTA;
+					}
+					else
+					{
+						error = 1;
+					}
 				}
 				break;
 				case INIT_STATE_CSTA:
 				{
-					playLoginSuccessSound();
-					broadcastNotifyUi(getProcessStepIntent(INIT_STATE_END));
-					mDeviceInitState = INIT_STATE_END;
-					removeConnectionTimeout();
+					if(nextState == INIT_STATE_END)
+					{
+						playLoginSuccessSound();
+						broadcastNotifyUi(getProcessStepIntent(INIT_STATE_END));
+						mDeviceInitState = INIT_STATE_END;
+						removeConnectionTimeout();
+						mManualConnect = false;
 
-					// After connecting and verified, add device to cache list
-					addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
+						// After connecting and verified, add device to cache list
+						addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
+					}
+					else
+					{
+						error = 1;
+					}
 				}
 				break;
+			}
+
+			if(error > 0)
+			{
+				appendLog(String.format("InitState error, current state=%d, receive state=%d",mDeviceInitState,nextState));
 			}
 		}
 		catch (Exception e)
@@ -1500,6 +1544,7 @@ public class BluetoothLeIndependentService extends Service
 		if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
 		{
 			appendLog("Not bonded");
+			LogUtil.d(TAG,"Not bonded",Thread.currentThread().getStackTrace());
 			_bondingDevice();
 		}
 		// Device bonded, try to connect to it
@@ -1509,6 +1554,7 @@ public class BluetoothLeIndependentService extends Service
 			if(isBluetoothDeviceConnected(address))
 			{
 				appendLog("Connected with OS");
+				LogUtil.d(TAG,"Connected with OS",Thread.currentThread().getStackTrace());
 				// Cached with App
 				if(isBluetoothDeviceCached(address))
 				{
@@ -1528,39 +1574,11 @@ public class BluetoothLeIndependentService extends Service
 			else
 			{
 				appendLog("Not connected with OS");
+				LogUtil.d(TAG,"Not connected with OS",Thread.currentThread().getStackTrace());
 				// start connect
 				_connect();
 			}
 		}
-	}
-
-	private void reConnectAfterMilliSeconds(final int time)
-	{
-		// Delay time to connect
-		mHandler.postDelayed(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				reConnectDevice();
-			}
-		}, time);
-	}
-
-	private void reConnectDevice()
-	{
-		if( CONNECTION_MAX_CONNECT == -1 || mConnectRetry++ < CONNECTION_MAX_CONNECT)
-		{
-			LogUtil.d(TAG,"[Process] reConnectDevice",Thread.currentThread().getStackTrace());
-			//broadcastConnectStatus(ACTION_BLE_NOTIFY_CONNECT_STATUS,CONNECTION_STATE_RE_CONNECTING);
-			_connect();
-		}
-	}
-
-	private void connectWithTimer(final String address)
-	{
-		mConnectRetry = 0;
-		connectDevice(address);
 	}
 
 	// Bond function
@@ -1582,6 +1600,7 @@ public class BluetoothLeIndependentService extends Service
 			int delayTime = 0;
 			if(mThreadConnect != null)
 			{
+				LogUtil.d(TAG, "Connect thread is running, skip",Thread.currentThread().getStackTrace());
 				return;
 			}
 
@@ -1661,18 +1680,17 @@ public class BluetoothLeIndependentService extends Service
 				return;
 			}
 
-			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
 			final int connectionState = getConnectionState();
 			if(connectionState == BluetoothProfile.STATE_CONNECTING )
 			{
-				appendLog("Already connecting");
-				LogUtil.e(TAG, "[Error] Already connecting.",Thread.currentThread().getStackTrace());
+				appendLog("Already binding");
+				LogUtil.e(TAG, "[Error] Already binding.",Thread.currentThread().getStackTrace());
 				return;
 			}
 			else if(connectionState == BluetoothProfile.STATE_CONNECTED)
 			{
-				appendLog("Already connected");
-				LogUtil.e(TAG, "[Error] Already connected.",Thread.currentThread().getStackTrace());
+				appendLog("Already bind");
+				LogUtil.e(TAG, "[Error] Already bind.",Thread.currentThread().getStackTrace());
 				return;
 			}
 			else if(connectionState == BluetoothProfile.STATE_DISCONNECTING)
@@ -1681,12 +1699,12 @@ public class BluetoothLeIndependentService extends Service
 				LogUtil.e(TAG, "[Error] Disconnecting, wait until disconnected.",Thread.currentThread().getStackTrace());
 				return;
 			}
+			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
 			mConnectionState = BluetoothProfile.STATE_CONNECTING;
 
 			// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
 			setBluetoothGatt(mBluetoothDevice.connectGatt(context, false, mGattCallback));
 			setupConnectionTimeout(5*1000);
-			mAllowReConnect = true;
 		}
 		catch (Exception e)
 		{
@@ -1702,9 +1720,9 @@ public class BluetoothLeIndependentService extends Service
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    public void disconnect(final boolean allowReConnect)
+    public void disconnect(final boolean reBind)
 	{
-		mAllowReConnect = allowReConnect;
+		mAllowReBind = reBind;
 
         if (initialize() == false)
 		{
@@ -1788,6 +1806,42 @@ public class BluetoothLeIndependentService extends Service
 	private void removeConnectionTimeout()
 	{
 		mHandler.removeCallbacks(mRunnableConnectTimeout);
+	}
+
+	private void setupConnectDeviceRunnable(final String address,final long delay)
+	{
+		removeConnectDeviceRunnable();
+
+		mRunnableConnectDevice = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				LogUtil.d(TAG, "Re-Connect in removeConnectedBluetoothDevice callback", Thread.currentThread().getStackTrace());
+				if (mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
+				{
+					if(address.isEmpty())
+					{
+						connectDevice();
+					}
+					else
+					{
+						connectDevice(address);
+					}
+				}
+			}
+		};
+
+		mHandler.postDelayed(mRunnableConnectDevice,delay);
+	}
+
+	private void removeConnectDeviceRunnable()
+	{
+		LogUtil.d(TAG,"Remove reconnect runnable",Thread.currentThread().getStackTrace());
+
+		mHandler.removeCallbacks(mRunnableConnectDevice);
+
+		mRunnableConnectDevice = null;
 	}
 
     /**
@@ -2138,18 +2192,20 @@ public class BluetoothLeIndependentService extends Service
 
 			mDeviceInitState = INIT_STATE_NONE;
 
-			// mAllowReConnect is false when disconnect manually
-			if(mAllowReConnect == false)
+			// if allowReConnect is false, skip
+			if(mAllowReBind == false)
 			{
 				mHandler.removeCallbacksAndMessages(null);
 				mBluetoothGatt = null;
 				return;
 			}
 
-			if(isBluetoothEnabled() && isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+			mAllowReBind = false;
+			if(mRunnableConnectDevice == null)
 			{
-				_bind();
+				setupConnectDeviceRunnable("",3000);
 			}
+
 		}
 		catch (Exception e)
 		{
@@ -2329,7 +2385,7 @@ public class BluetoothLeIndependentService extends Service
 				{
 					handleReceiveCsta(receiveData,false);
 
-                    initDeviceState(); // Receive CSTA
+                    initDeviceState(INIT_STATE_END); // Receive CSTA
 				}
 				break;
 
@@ -2348,20 +2404,31 @@ public class BluetoothLeIndependentService extends Service
 
 				case CMD_SETTING_INFORMATION:
 				{
-                    // Receive response from device, check if data is match we sent before
+                    // Receive response from device
 					if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_RESPONSE)
                     {
 						final byte[] data = subByteArray(receiveData,3,16);
 						loadBleSetting(data);
-
 						saveBleSetting(data);
 
 
 						final Message message = new Message();
-						message.arg1 = PARAM_KEYLESS_LEVEL;
-						message.obj = data[1];
+						message.arg1 = PARAM_SETTING_INFORMATION;
+						message.arg2 = (int)receiveData[PACKET_PARAMETER];
+						message.obj = data;
 						sendCallbackMessage(message);
                     }
+					// Receive response from device, check if data is match we sent before
+					else if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_WRITE)
+					{
+						final byte[] data = subByteArray(receiveData,3,16);
+
+						final Message message = new Message();
+						message.arg1 = PARAM_SETTING_INFORMATION;
+						message.arg2 = (int)receiveData[PACKET_PARAMETER];
+						message.obj = data;
+						sendCallbackMessage(message);
+					}
 				}
 				break;
 			}
@@ -2374,8 +2441,8 @@ public class BluetoothLeIndependentService extends Service
 
 	public void sendRequestBleSetting()
 	{
-		LogUtil.d(TAG, "[Process] Send RequestBleSetting",Thread.currentThread().getStackTrace());
-		appendLog(formatSendString("Send RequestBleSetting"));
+		LogUtil.d(TAG, "[Process] Send RequestSetting",Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send RequestSetting"));
 		// Init packet content
 		final byte[] writeData = new byte[PACKET_LENGTH];
 		writeData[PACKET_ID] = getRandom(255);
@@ -2520,6 +2587,28 @@ public class BluetoothLeIndependentService extends Service
 		final String s = formatByteArrayToLog(writeData);
 		LogUtil.d(TAG, " Send TxPower  : " + s,Thread.currentThread().getStackTrace());
 		appendLog(formatSendString("Send TxPower  : " + String.format("0x%02X", level)));
+
+		sendPlainData(writeData);
+	}
+
+	public void sendSettingInformation(final byte[] data)
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[PACKET_ID] = getRandom(255);
+		writeData[PACKET_COMMAND] = CMD_SETTING_INFORMATION;
+		writeData[PACKET_PARAMETER] = (byte)PARAM_SETTING_WRITE;
+
+		fillData(writeData,data);
+
+		// fill check sum
+		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+
+
+		final String s = formatByteArrayToLog(writeData);
+		LogUtil.d(TAG, " Send SettingInformation  : " + s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send SettingInformation  : "+ NEW_LINE_CHARACTER + s));
 
 		sendPlainData(writeData);
 	}
@@ -2881,15 +2970,12 @@ public class BluetoothLeIndependentService extends Service
 				// If it is not bonded, it is the first ACL_CONNECTED during bonding or not what we want
 				if(bluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
 				{
-					LogUtil.d(TAG,"addConnectedBluetoothDevice , start connect device",Thread.currentThread().getStackTrace());
-					mHandler.postDelayed(new Runnable()
+					LogUtil.d(TAG,String.format("mAutoConnectOnDisconnect = %s , mManualConnect = %s",mAutoConnectOnDisconnect,mManualConnect),Thread.currentThread().getStackTrace());
+					if(mDeviceInitState == INIT_STATE_BOND_OK || mManualConnect || mAutoConnectOnDisconnect)
 					{
-						@Override
-						public void run()
-						{
-							connectDevice(bluetoothDevice.getAddress());
-						}
-					},3000);
+						LogUtil.d(TAG,"addConnectedBluetoothDevice , start connect device after 3 seconds",Thread.currentThread().getStackTrace());
+						setupConnectDeviceRunnable(bluetoothDevice.getAddress(),3000);
+					}
 				}
 			}
 		}
@@ -2936,18 +3022,7 @@ public class BluetoothLeIndependentService extends Service
 		// If autoConnect is enabled or is tuning key less, re-connect it
 		if(mAutoConnectOnDisconnect)
 		{
-			mHandler.postDelayed(new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					LogUtil.d(TAG,"Re-Connect in removeConnectedBluetoothDevice callback",Thread.currentThread().getStackTrace());
-					if(mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
-					{
-						connectDevice();
-					}
-				}
-			},3000);
+			setupConnectDeviceRunnable("",3000);
 		}
 	}
 
@@ -3189,13 +3264,13 @@ public class BluetoothLeIndependentService extends Service
 	}
 
 
-	private void saveBleSetting(final byte[] data)
+	public void saveBleSetting(final byte[] data)
 	{
 		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
 		final String encodeString =  Base64.encodeToString(data,Base64.DEFAULT);
 		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_BLE_SETTING,encodeString).apply();
 
-		initDeviceState();
+		initDeviceState(INIT_STATE_CSTA);
 	}
 
 	//*****************************************************************//
