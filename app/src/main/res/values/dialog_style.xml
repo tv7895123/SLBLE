@@ -21,5 +21,10 @@
         <item name="android:windowEnterAnimation">@anim/fade_in</item>
         <item name="android:windowExitAnimation">@anim/fade_out</item>
     </style>>
+
+    <style name="MyAppCompat" parent="Theme.AppCompat">
+        <item name="colorAccent">@color/md_blue_500</item>
+        <item name="android:textColorSecondary">@color/md_blue_A700</item>
+    </style>
 </resources>
 

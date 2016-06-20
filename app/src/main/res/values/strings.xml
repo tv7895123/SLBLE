@@ -56,7 +56,58 @@
     <string name = "description_slave_tag"></string>
     <string name = "description_slave_tag_counter"></string>
 
-    <string name="day">日</string>
+
+    <!--AF_TITLE-->
+    <string name = "title_item_af_table">AF Table</string>
+    <string name = "title_item_auto_lock_trunk">Locking after the trunk closing (in Arm mode)</string>
+    <string name = "title_item_door_follow_ign">Door lock/unlock upon ignition on/off</string>
+    <string name = "title_item_detect_dome_pin_switch">Into arm system’s door zoom detect car’s dome light or director door pin switch</string>
+    <string name = "title_item_auto_lock_last_door">Auto arm or lock upon last door close</string>
+    <string name = "title_item_auto_rearm">Auto rearm On /Off</string>
+    <string name = "title_item_siren_volume">Siren volume selection</string>
+    <string name = "title_item_slave_tag_condition">Slave TAG search to unlock the door during reomote engine start</string>
+    <string name = "title_item_anti_car_jack">Anti-carjack mode select</string>
+    <string name = "title_item_engine_kill_output">Black/Red wire for engine kill output</string>
+    <string name = "title_item_2_step_disarm">2-step disarm  (Normal mode)</string>
+    <string name = "title_item_2_step_disarm_slave">2-step disarm  (Slave mode)</string>
+    <string name = "title_item_range_check_timer">Range check timer</string>
+    <string name = "title_item_door_input">Door input selection</string>
+    <string name = "title_item_gsm_protocol">GSM protocol selection </string>
+    <string name = "title_item_gsm_out_command">GSM OUT command selection</string>
+    <string name = "title_item_event_1_input">Event1 input selection (Normal mode)</string>
+    <string name = "title_item_event_1_input_slave">Event1 input selection (Slave mode)</string>
+    <string name = "title_item_car_alarm_mode">Car Alarm Mode function</string>
+    <string name = "title_item_slave_mode_event">Event for search Tag or CAN PINCODE function for Slave mode</string>
+    <string name = "title_item_slave_al_au_input">Slave Analog AL/AU input select</string>
+    <string name = "title_item_event_2_input">Event2 input selection</string>
+    <string name = "title_item_slave_search_time">Slave search time</string>
+    <string name = "title_item_trunk_detection">Trunk moto Detection (CH6)</string>
+
+    <!--SF_TITLE-->
+    <string name = "title_item_sf_table">SF Table</string>
+    <string name = "title_item_engine_start">Engine Start Function</string>
+    <string name = "title_item_running_time">Each time remote engine running time </string>
+    <string name = "title_item_sensor_running">Shock sensor or Tilt sensor work during engine running</string>
+    <string name = "title_item_auto_shut_engine">Auto shut engine when tempearture higher than +50c(Remote start) </string>
+    <string name = "title_item_start_with_lock">Remote start with or without lock/arm </string>
+    <string name = "title_item_start_with_parking_light">Remote start park light active.  </string>
+    <string name = "title_item_locking_management">Locking management during remote engine start</string>
+    <string name = "title_item_auto_disarm">Disarm with engine status</string>
+    <string name = "title_item_cranking_time">Cranking time .Gray /black wire detect engine running by voltage oil/RPM</string>
+    <string name = "title_item_fuel_type">Gasoline or Diesel select</string>
+    <string name = "title_item_engine_running_detect">Select engine running detect mode</string>
+    <string name = "title_item_turbo_time_active">Manual gear select and Turbo timer active function</string>
+    <string name = "title_item_ign3_bypass">IGN3 Bypass wire (Pink wire) (It ouput 2S before IGN )</string>
+    <string name = "title_item_engine_start_pts">Start mode for SF #1=3</string>
+    <string name = "title_item_auto_gear">Auto/Manual Gear Selection</string>
+    <string name = "title_item_engine_start_webasto">The temperature at which Webasto works before the automatically engine starting</string>
+    <string name = "title_item_webasto_time">The duration of the Webasto working</string>
+    <string name = "title_item_engine_start_algroithm">The (1L+3) engine starting algorithm</string>
+
+
+
+
+<string name="day">日</string>
 	<string name="days">天</string>
 	<string name="hour">時</string>
     <string name="minute">分</string>

@@ -26,8 +26,11 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.TextView;
+import com.startline.slble.Adapter.TabFragmentPagerAdapter;
 
 /**
  * To be used with ViewPager to provide a tab indicator component which give constant feedback as to
@@ -73,6 +76,7 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
     private int mTabViewLayoutId;
     private int mTabViewTextViewId;
+    private int mTabViewIconId;
 
     private ViewPager mViewPager;
     private ViewPager.OnPageChangeListener mViewPagerPageChangeListener;
@@ -150,6 +154,13 @@ public class SlidingTabLayout extends HorizontalScrollView {
         mTabViewTextViewId = textViewId;
     }
 
+
+    public void setCustomTabView(int layoutResId, int textViewId, int iconViewId) {
+        mTabViewLayoutId = layoutResId;
+        mTabViewTextViewId = textViewId;
+        mTabViewIconId = iconViewId;
+    }
+
     /**
      * Sets the associated view pager. Note that the assumption here is that the pager content
      * (number of tabs and tab titles) does not change after this call has been made.
@@ -195,31 +206,53 @@ public class SlidingTabLayout extends HorizontalScrollView {
     }
 
     private void populateTabStrip() {
-        final PagerAdapter adapter = mViewPager.getAdapter();
+        //final PagerAdapter adapter = mViewPager.getAdapter();
+        final TabFragmentPagerAdapter adapter = (TabFragmentPagerAdapter) mViewPager.getAdapter();
+
         final View.OnClickListener tabClickListener = new TabClickListener();
 
-        for (int i = 0; i < adapter.getCount(); i++) {
+        final int avgWidth = getResources().getDisplayMetrics().widthPixels / adapter.getCount();
+        for (int i = 0; i < adapter.getCount(); i++)
+        {
             View tabView = null;
             TextView tabTitleView = null;
+            ImageView tabIcon = null;
 
-            if (mTabViewLayoutId != 0) {
+            if (mTabViewLayoutId != 0)
+            {
                 // If there is a custom tab view layout id set, try and inflate it
                 tabView = LayoutInflater.from(getContext()).inflate(mTabViewLayoutId, mTabStrip,
                         false);
                 tabTitleView = (TextView) tabView.findViewById(mTabViewTextViewId);
+
+                if(mTabViewIconId > 0)
+                {
+                    tabIcon = (ImageView) tabView.findViewById(mTabViewIconId);
+                }
             }
 
-            if (tabView == null) {
+            if (tabView == null)
+            {
                 tabView = createDefaultTabView(getContext());
             }
 
-            if (tabTitleView == null && TextView.class.isInstance(tabView)) {
+            if (tabTitleView == null && TextView.class.isInstance(tabView))
+            {
                 tabTitleView = (TextView) tabView;
+            }
+
+            if (tabIcon != null)
+            {
+                tabIcon.setImageResource(adapter.getIconResId(i));
             }
 
             tabTitleView.setText(adapter.getPageTitle(i));
             tabView.setOnClickListener(tabClickListener);
 
+
+            ViewGroup.LayoutParams param = tabView.getLayoutParams();
+            param.width = avgWidth;
+            tabView.setLayoutParams(param);
             mTabStrip.addView(tabView);
         }
     }

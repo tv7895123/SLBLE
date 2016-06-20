@@ -4,6 +4,10 @@
 
 
     <item android:id="@+id/action_setting"
-          android:title="setting"
+          android:title="SETTING"
+          android:showAsAction="always" />
+
+    <item android:id="@+id/action_tool"
+          android:title="TOOL"
           android:showAsAction="always" />
 </menu>

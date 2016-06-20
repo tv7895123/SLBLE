@@ -8,6 +8,9 @@ public class SlbleProtocol
 	//*****************************************************************//
     //  Packet field		                                           //
     //*****************************************************************//
+	public static final int PACKET_DATA_LENGTH = 16;
+	public static final int PACKET_PROGRAM_DATA_LENGTH = 17;
+	// Normal packet
 	public static final int PACKET_ID = 0;
 	public static final int PACKET_COMMAND = 1;
 	public static final int PACKET_PARAMETER = 2;
@@ -15,7 +18,19 @@ public class SlbleProtocol
 	public static final int PACKET_CHECK_SUM = 19;
 	public static final int PACKET_LENGTH = 20;
 
-	public static final int PACKET_DATA_LENGTH = 16;
+
+	// Program table packet
+	public static final int PACKET_AVAILABLE_DATA_LENGTH = 0;
+
+	// Header
+	public static final int PACKET_TOTAL_DATA_LENGTH = 3;
+	public static final int PACKET_ADDRESS_HIGH_BYTE = 4;
+	public static final int PACKET_ADDRESS_LOW_BYTE = 5;
+	public static final int PACKET_PROGRAM_DATA_CHECK_SUM = 18;
+	// Data
+	public static final int PACKET_PROGRAM_DATA = 2;
+
+
 	//*****************************************************************//
     //  Packet Command												   //
     //*****************************************************************//
@@ -27,7 +42,8 @@ public class SlbleProtocol
 	public static final int CMD_TX_POWER = 0x40;
 	public static final int CMD_CHECK_CONNECTION = 0x50;
 	public static final int CMD_SETTING_INFORMATION = 0x60;
-
+	public static final int CMD_PROGRAM_TABLE_HEADER = 0x80;
+	public static final int CMD_PROGRAM_TABLE_DATA = 0x81;
 
     //*****************************************************************//
     //  Packet Parameter											   //
@@ -78,6 +94,12 @@ public class SlbleProtocol
 	public static final int PARAM_SETTING_WRITE = 0x02;
 
 
+	//-------------------------------------------------------------------
+	// CMD_PROGRAM_TABLE_HEADER   0x80
+	public static final int PARAM_READ_PROGRAM_TABLE = 0x00;
+	public static final int PARAM_WRITE_PROGRAM_TABLE = 0x01;
+
+
     //*****************************************************************//
     //  Protocol functions                                             //
     //*****************************************************************//
@@ -94,15 +116,11 @@ public class SlbleProtocol
 		return data;
 	}
 
-	public static byte[] setDataField(final byte[] outputPacket,final byte[] data)
+	public static byte[] setDataField(final byte[] outputPacket,final int offsetIndex,final byte[] data)
 	{
-		if(outputPacket == null || outputPacket.length != PACKET_LENGTH) return null;
-		//if(data == null || data.length != PACKET_DATA_LENGTH) return null;
-
-
 		for(int i=0;i<data.length;i++)
 		{
-			outputPacket[PACKET_DATA+i] = data[i];
+			outputPacket[offsetIndex+i] = data[i];
 		}
 
 		return outputPacket;

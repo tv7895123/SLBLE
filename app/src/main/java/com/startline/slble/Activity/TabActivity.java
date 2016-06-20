@@ -18,12 +18,10 @@ package com.startline.slble.Activity;
 
 import android.app.ActivityManager;
 import android.app.ProgressDialog;
-import android.bluetooth.BluetoothDevice;
 import android.content.*;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTabHost;
 import android.util.Log;
@@ -299,6 +297,14 @@ public class TabActivity extends FragmentActivity
 //				}
 			}
 			return true;
+
+			case R.id.action_tool:
+			{
+				final Intent intent = new Intent();
+				intent.setClass(context,ProgramToolActivity.class);
+				startActivity(intent);
+				return true;
+			}
 
 			default:
 				return super.onOptionsItemSelected(item);
