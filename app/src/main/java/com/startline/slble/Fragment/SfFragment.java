@@ -22,22 +22,22 @@ import static com.startline.slble.Interface.ProgramTool.*;
 
 public class SfFragment extends BaseFragment
 {
-    public static SfFragment newInstance(String title, int indicatorColor, int dividerColor)
+    public static SfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor)
     {
-        return newInstance(title,indicatorColor,dividerColor,0,null);
+        return newInstance(index,title,indicatorColor,dividerColor,0,null);
     }
 
-    public static SfFragment newInstance(String title, int indicatorColor, int dividerColor,final OnProgramDataChangedListener onProgramDataChangedListener)
+    public static SfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor,final OnProgramDataChangedListener onProgramDataChangedListener)
     {
-        return newInstance(title,indicatorColor,dividerColor,0,onProgramDataChangedListener);
+        return newInstance(index,title,indicatorColor,dividerColor,0,onProgramDataChangedListener);
     }
 
-    public static SfFragment newInstance(String title, int indicatorColor, int dividerColor, int iconResId)
+    public static SfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor, int iconResId)
     {
-        return newInstance(title,indicatorColor,dividerColor,iconResId,null);
+        return newInstance(index,title,indicatorColor,dividerColor,iconResId,null);
     }
 
-    public static SfFragment newInstance(String title, int indicatorColor, int dividerColor, int iconResId, final OnProgramDataChangedListener onProgramDataChangedListener)
+    public static SfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor, int iconResId, final OnProgramDataChangedListener onProgramDataChangedListener)
     {
         SfFragment f = new SfFragment();
         f.setTitle(title);
@@ -45,12 +45,11 @@ public class SfFragment extends BaseFragment
         f.setDividerColor(dividerColor);
         f.setIconResId(iconResId);
         f.setOnProgramDataChangedListener(onProgramDataChangedListener);
-
+        f.setPageIndex(index);
 
         //pass data
         Bundle args = new Bundle();
         f.setArguments(args);
-
         return f;
     }
 
@@ -96,18 +95,21 @@ public class SfFragment extends BaseFragment
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
-        final View rootView = inflater.inflate(R.layout.fragment_program_table_af_sf, container, false);
-        listView = (ListView)rootView.findViewById(R.id.list_view);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
+        if(mRootView == null)
         {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+            mRootView = inflater.inflate(R.layout.fragment_program_table_af_sf, container, false);
+            listView = (ListView)mRootView.findViewById(R.id.list_view);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
             {
-                handleOnItemClick(parent,view,position,id);
-            }
-        });
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+                {
+                    handleOnItemClick(parent,view,position,id);
+                }
+            });
+        }
 
-        return rootView;
+        return mRootView;
     }
 
     @Override
@@ -287,6 +289,12 @@ public class SfFragment extends BaseFragment
             mDataList.add(map);
         }
         return mDataList;
+    }
+
+    @Override
+    public void refresh()
+    {
+        updateListAdapter(true);
     }
 
 }

@@ -14,34 +14,34 @@ public interface  ProgramTool
     public static final int AF_ADDRESS_HIGH =0x00;
     public static final int AF_ADDRESS_LOW =0x40;
     public static final int SF_ADDRESS_HIGH =0x00;
-    public static final int SF_ADDRESS_LOW =0x80;
+    public static final int SF_ADDRESS_LOW =0x60;
     public static final int LNT_ADDRESS_HIGH =0x00;
     public static final int LNT_ADDRESS_LOW =0x80;
 
-    public static final int FLEX_CH1_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH1_ADDRESS_LOW =0x80;
-    public static final int FLEX_CH2_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH2_ADDRESS_LOW =0x90;
-    public static final int FLEX_CH3_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH3_ADDRESS_LOW =0xA0;
-    public static final int FLEX_CH4_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH4_ADDRESS_LOW =0xB0;
-    public static final int FLEX_CH5_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH5_ADDRESS_LOW =0xC0;
-    public static final int FLEX_CH6_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH6_ADDRESS_LOW =0xD0;
-    public static final int FLEX_CH7_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH7_ADDRESS_LOW =0xE0;
-    public static final int FLEX_CH8_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH8_ADDRESS_LOW =0xF0;
-    public static final int FLEX_CH9_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH9_ADDRESS_LOW =0x40;
-    public static final int FLEX_CH10_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH10_ADDRESS_LOW =0x50;
-    public static final int FLEX_CH11_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH11_ADDRESS_LOW =0x60;
-    public static final int FLEX_CH12_ADDRESS_HIGH =0x01;
-    public static final int FLEX_CH12_ADDRESS_LOW =0x70;
+    public static final byte FLEX_CH1_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH1_ADDRESS_LOW = (byte)0x80;
+    public static final byte FLEX_CH2_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH2_ADDRESS_LOW =(byte)0x90;
+    public static final byte FLEX_CH3_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH3_ADDRESS_LOW =(byte)0xA0;
+    public static final byte FLEX_CH4_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH4_ADDRESS_LOW =(byte)0xB0;
+    public static final byte FLEX_CH5_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH5_ADDRESS_LOW =(byte)0xC0;
+    public static final byte FLEX_CH6_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH6_ADDRESS_LOW =(byte)0xD0;
+    public static final byte FLEX_CH7_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH7_ADDRESS_LOW =(byte)0xE0;
+    public static final byte FLEX_CH8_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH8_ADDRESS_LOW =(byte)0xF0;
+    public static final byte FLEX_CH9_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH9_ADDRESS_LOW =0x40;
+    public static final byte FLEX_CH10_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH10_ADDRESS_LOW =0x50;
+    public static final byte FLEX_CH11_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH11_ADDRESS_LOW =0x60;
+    public static final byte FLEX_CH12_ADDRESS_HIGH =0x01;
+    public static final byte FLEX_CH12_ADDRESS_LOW =0x70;
 
 
     public static final int AF_START = 0;
@@ -117,25 +117,48 @@ public interface  ProgramTool
     public static final int SF_ITEM_ENGINE_START_ALGROITHM = 17;
 
     public static final int[][] SF_TABLE = new int[][]
-            {
-                    // ITEM                                       ,Length,     MinValue,   MaxValue
-                    {SF_ITEM_ENGINE_START                   ,1,0,2}
-                    ,{SF_ITEM_RUNNING_TIME                  ,1,0,3}
-                    ,{SF_ITEM_SENSOR_RUNNING               ,1,0,3}
-                    ,{SF_ITEM_AUTO_SHUT_ENGINE             ,1,0,1}
-                    ,{SF_ITEM_START_WITH_LOCK              ,1,0,1}
-                    ,{SF_ITEM_START_WITH_PARKING_LIGHT   ,1,0,1}
-                    ,{SF_ITEM_LOCKING_MANAGEMENT         ,1,0,3}
-                    ,{SF_ITEM_AUTO_DISARM                    ,1,0,1}
-                    ,{SF_ITEM_CRANKING_TIME                  ,1,0,3}
-                    ,{SF_ITEM_FUEL_TYPE                        ,1,0,3}
-                    ,{SF_ITEM_ENGINE_RUNNING_DETECT       ,1,0,3}
-                    ,{SF_ITEM_TURBO_TIME_ACTIVE             ,1,0,3}
-                    ,{SF_ITEM_IGN3_BYPASS                      ,1,0,3}
-                    ,{SF_ITEM_ENGINE_START_PTS               ,1,0,3}
-                    ,{SF_ITEM_AUTO_GEAR                        ,1,0,3}
-                    ,{SF_ITEM_ENGINE_START_WEBASTO         ,1,0,3}
-                    ,{SF_ITEM_WEBASTO_TIME                    ,1,0,3}
-                    ,{SF_ITEM_ENGINE_START_ALGROITHM      ,1,0,3}
-            };
+    {
+            // ITEM                                       ,Length,     MinValue,   MaxValue
+            {SF_ITEM_ENGINE_START                   ,1,0,2}
+            ,{SF_ITEM_RUNNING_TIME                  ,1,0,3}
+            ,{SF_ITEM_SENSOR_RUNNING               ,1,0,3}
+            ,{SF_ITEM_AUTO_SHUT_ENGINE             ,1,0,1}
+            ,{SF_ITEM_START_WITH_LOCK              ,1,0,1}
+            ,{SF_ITEM_START_WITH_PARKING_LIGHT   ,1,0,1}
+            ,{SF_ITEM_LOCKING_MANAGEMENT         ,1,0,3}
+            ,{SF_ITEM_AUTO_DISARM                    ,1,0,1}
+            ,{SF_ITEM_CRANKING_TIME                  ,1,0,3}
+            ,{SF_ITEM_FUEL_TYPE                        ,1,0,3}
+            ,{SF_ITEM_ENGINE_RUNNING_DETECT       ,1,0,3}
+            ,{SF_ITEM_TURBO_TIME_ACTIVE             ,1,0,3}
+            ,{SF_ITEM_IGN3_BYPASS                      ,1,0,3}
+            ,{SF_ITEM_ENGINE_START_PTS               ,1,0,3}
+            ,{SF_ITEM_AUTO_GEAR                        ,1,0,3}
+            ,{SF_ITEM_ENGINE_START_WEBASTO         ,1,0,3}
+            ,{SF_ITEM_WEBASTO_TIME                    ,1,0,3}
+            ,{SF_ITEM_ENGINE_START_ALGROITHM      ,1,0,3}
+    };
+
+
+    // LNT Fragment
+    public static final int LNT_ITEM_PIN_CODE_1 = 3;
+    public static final int LNT_ITEM_PIN_CODE_2 = 4;
+    public static final int LNT_ITEM_PIN_CODE_3 = 5;
+    public static final int LNT_ITEM_PIN_CODE_4 = 6;
+    public static final int LNT_ITEM_TILT_SENSOR = 11;
+    public static final int LNT_ITEM_SHOCK_SENSOR = 12;
+    public static final int LNT_ITEM_SIREN = 13;
+
+    // CH Fragment
+    public static final int CH_ITEM_EVENT_ON = 0;
+    public static final int CH_ITEM_EVENT_OFF = 1;
+    public static final int CH_ITEM_T1 = 2;
+    public static final int CH_ITEM_T2 = 4;
+    public static final int CH_ITEM_T3 = 6;
+    public static final int CH_ITEM_T4 = 8;
+    public static final int CH_ITEM_CONDITION_1 = 10;
+    public static final int CH_ITEM_CONDITION_2 = 11;
+    public static final int CH_ITEM_CONDITION_3 = 12;
+    public static final int CH_ITEM_BYPASS = 13;
+    public static final int CH_ITEM_FUNCTION = 14;
 }

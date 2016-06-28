@@ -5,5 +5,5 @@ package com.startline.slble.Interface;
  */
 public interface OnProgramDataChangedListener
 {
-    public void onProgramDataChanged(final byte[] data);
+    public void onProgramDataChanged(final int pageIndex,final byte[] data);
 }

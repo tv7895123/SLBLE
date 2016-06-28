@@ -23,4 +23,12 @@
         <item name="minus_17_dbm">0</item>
     </string-array>
 
+    <string-array name="test">
+        <item name="plus_7_dbm">adfffffffffffffffffffffffffffff7 dBm</item>
+        <item name="plus_4_dbm"> f     gggggggggggggggggggggggggg4 dBm</item>
+        <item name="plus_2_dbm">2ggggggggggdshhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh dBm</item>
+        <item name="plus_0_dbm">yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy0 dBm</item>
+        <item name="minus_5_dbm">-5 dBm</item>
+    </string-array>
+
 </resources>

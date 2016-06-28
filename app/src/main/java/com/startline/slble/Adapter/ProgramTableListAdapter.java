@@ -176,6 +176,16 @@ public class ProgramTableListAdapter extends BaseAdapter
                 }
                 else
                 {
+                    if(initValue >= itemArray.length)
+                    {
+                        initValue = itemArray.length-1;
+                    }
+
+                    if(initValue < 0)
+                    {
+                        initValue = 0;
+                    }
+
                     holder.initValue.setText(String.format("%s --> ",itemArray[initValue]));
                     holder.value.setText(itemArray[modifiedValue]);
                     holder.value.setVisibility(View.VISIBLE);

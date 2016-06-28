@@ -138,25 +138,17 @@ public class DeviceStatusFragment extends Fragment
 			break;
 			case R.id.btn_remote_start:
 			{
-				//command = CONTROL_START_REMOTE_ENGINE_START;
-
-				final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-				service.writeProgramTable(0,0,null);
+				command = CONTROL_START_REMOTE_ENGINE_START;
 			}
 			break;
 			case R.id.btn_remote_stop:
 			{
-				//command = CONTROL_START_REMOTE_ENGINE_STOP;
-
-				final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-				service.sendProgramTableData();
+				command = CONTROL_START_REMOTE_ENGINE_STOP;
 			}
 			break;
 			case R.id.btn_check:
 			{
-				//command = CONTROL_ALARM_CHECK_CAR_STATUS;
-				final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-				service.readProgramTable(0,0,32);
+				command = CONTROL_ALARM_CHECK_CAR_STATUS;
 			}
 			break;
 			case R.id.btn_command:

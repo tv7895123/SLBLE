@@ -8,42 +8,39 @@ public class SlbleProtocol
 	//*****************************************************************//
     //  Packet field		                                           //
     //*****************************************************************//
-	public static final int PACKET_DATA_LENGTH = 16;
-	public static final int PACKET_PROGRAM_DATA_LENGTH = 17;
-	// Normal packet
-	public static final int PACKET_ID = 0;
-	public static final int PACKET_COMMAND = 1;
-	public static final int PACKET_PARAMETER = 2;
-	public static final int PACKET_DATA = 3;
-	public static final int PACKET_CHECK_SUM = 19;
 	public static final int PACKET_LENGTH = 20;
+	public static final int PACKET_DATA_LENGTH = 16;
+	public static final int PACKET_PROGRAM_DATA_LENGTH = 13;
+
+	// Normal packet
+	public static final int FIELD_ID = 0;
+	public static final int FIELD_COMMAND = 1;
+	public static final int FIELD_PARAMETER = 2;
+	public static final int FIELD_DATA = 3;
+	public static final int FIELD_CHECK_SUM = 19;
+
 
 
 	// Program table packet
-	public static final int PACKET_AVAILABLE_DATA_LENGTH = 0;
-
-	// Header
-	public static final int PACKET_TOTAL_DATA_LENGTH = 3;
-	public static final int PACKET_ADDRESS_HIGH_BYTE = 4;
-	public static final int PACKET_ADDRESS_LOW_BYTE = 5;
-	public static final int PACKET_PROGRAM_DATA_CHECK_SUM = 18;
-	// Data
-	public static final int PACKET_PROGRAM_DATA = 2;
+	public static final int FIELD_PROGRAM_ADDRESS_HIGH_BYTE = 3;
+	public static final int FIELD_PROGRAM_ADDRESS_LOW_BYTE = 4;
+	public static final int FIELD_PROGRAM_DATA_LENGTH = 5;
+	public static final int FIELD_PROGRAM_DATA = 6;
 
 
 	//*****************************************************************//
     //  Packet Command												   //
     //*****************************************************************//
-	public static final int CMD_BLE_DEBUG = 0x01;
-	public static final int CMD_ACK = 0x02;
-	public static final int CMD_ERROR_MESSAGE = 0x03;
-	public static final int CMD_CAR_STATUS = 0x20;
-	public static final int CMD_PHONE_CONTROL_COMMAND = 0x30;
-	public static final int CMD_TX_POWER = 0x40;
-	public static final int CMD_CHECK_CONNECTION = 0x50;
-	public static final int CMD_SETTING_INFORMATION = 0x60;
-	public static final int CMD_PROGRAM_TABLE_HEADER = 0x80;
-	public static final int CMD_PROGRAM_TABLE_DATA = 0x81;
+	public static final byte CMD_BLE_DEBUG = 0x01;
+	public static final byte CMD_ACK = 0x02;
+	public static final byte CMD_ERROR_MESSAGE = 0x03;
+	public static final byte CMD_CAR_STATUS = 0x20;
+	public static final byte CMD_PHONE_CONTROL_COMMAND = 0x30;
+	public static final byte CMD_TX_POWER = 0x40;
+	public static final byte CMD_CHECK_CONNECTION = 0x50;
+	public static final byte CMD_SETTING_INFORMATION = 0x60;
+	public static final byte CMD_PROGRAM_INTERFACE = (byte) 0x80;
+	public static final byte CMD_PROGRAM_DATA = (byte) 0x81;
 
     //*****************************************************************//
     //  Packet Parameter											   //
@@ -69,6 +66,7 @@ public class SlbleProtocol
 	public static final int PARAM_MESSAGE_LOGIN_PWD_ERROR = 0x03;
 	public static final int PARAM_MESSAGE_RANDOM_NUMBER = 0x04;
 	public static final int PARAM_MESSAGE_TX_POWER_ERROR = 0x05;
+	public static final int PARAM_MESSAGE_PROGRAM_DATA_ERROR = 0x06;
 
 
 	//-------------------------------------------------------------------
@@ -95,9 +93,19 @@ public class SlbleProtocol
 
 
 	//-------------------------------------------------------------------
-	// CMD_PROGRAM_TABLE_HEADER   0x80
-	public static final int PARAM_READ_PROGRAM_TABLE = 0x00;
-	public static final int PARAM_WRITE_PROGRAM_TABLE = 0x01;
+	// CMD_PROGRAM_INTERFACE   0x80
+	public static final int PARAM_ASK_INTO_PROGRAM_INTERFACE = 0x00;
+	public static final int PARAM_ASK_LEAVE_PROGRAM_INTERFACE = 0x01;
+	public static final int PARAM_BLE_INTO_PROGRAM_INTERFACE = 0x02;
+	public static final int PARAM_BLE_LEAVE_PROGRAM_INTERFACE = 0x03;
+
+
+	//-------------------------------------------------------------------
+	// CMD_PROGRAM_DATA   0x81
+	public static final int PARAM_READ_PROGRAM_DATA = 0x00;
+	public static final int PARAM_TX_REPLY_DEAD_DATA = 0x01;
+	public static final int PARAM_WRITE_PROGRAM_DATA = 0x02;
+	public static final int PARAM_TX_REPLY_WRITE_DATA = 0x03;
 
 
     //*****************************************************************//
@@ -110,7 +118,7 @@ public class SlbleProtocol
 		byte[] data = new byte[PACKET_DATA_LENGTH];
 		for(int i=0;i<data.length;i++)
 		{
-			data[i] = receivedData[PACKET_DATA+i];
+			data[i] = receivedData[FIELD_DATA+i];
 		}
 
 		return data;

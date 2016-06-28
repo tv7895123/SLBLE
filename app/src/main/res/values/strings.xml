@@ -104,7 +104,10 @@
     <string name = "title_item_webasto_time">The duration of the Webasto working</string>
     <string name = "title_item_engine_start_algroithm">The (1L+3) engine starting algorithm</string>
 
-
+    <string name = "setting_changed_prompt_title">Setting changed</string>
+    <string name = "setting_changed_prompt">Do you want to exit without save current setting?</string>
+    <string name = "discard">Discard</string>
+    <string name = "save">Save</string>
 
 
 <string name="day">日</string>

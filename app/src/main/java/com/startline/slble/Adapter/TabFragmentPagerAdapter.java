@@ -9,36 +9,44 @@ import java.util.LinkedList;
 /**
  * Created by terry on 2016/6/8.
  */
-public class TabFragmentPagerAdapter extends FragmentPagerAdapter {
+public class TabFragmentPagerAdapter extends FragmentPagerAdapter
+{
 
     LinkedList<BaseFragment> fragments = null;
 
-    public TabFragmentPagerAdapter(FragmentManager fm, LinkedList<BaseFragment> fragments) {
+    public TabFragmentPagerAdapter(FragmentManager fm, LinkedList<BaseFragment> fragments)
+    {
         super(fm);
-        if (fragments == null) {
+        if (fragments == null)
+        {
             this.fragments = new LinkedList<BaseFragment>();
-        }else{
+        }
+        else
+        {
             this.fragments = fragments;
         }
     }
 
     @Override
-    public BaseFragment getItem(int position) {
+    public BaseFragment getItem(int position)
+    {
         return fragments.get(position);
     }
 
     @Override
-    public int getCount() {
+    public int getCount()
+    {
         return fragments.size();
     }
 
     @Override
-    public CharSequence getPageTitle(int position) {
+    public CharSequence getPageTitle(int position)
+    {
         return fragments.get(position).getTitle();
     }
 
-    public int getIconResId(int position) {
+    public int getIconResId(int position)
+    {
         return fragments.get(position).getIconResId();
     }
-
 }

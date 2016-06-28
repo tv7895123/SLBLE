@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name = "light_gray">#3FEEEEEE</color>
-    <color name = "dark_gray">#454545</color>
+    <color name = "dark_gray">#303030</color>
+    <color name = "gray">#7F7F7F</color>
     <color name = "black">#000000</color>
     <color name = "red">#FF0000</color>
     <color name = "white">#FFFFFF</color>
     <color name = "blue">#0066FF</color>
+    <color name = "green">#00AA66</color>
     <color name = "light_blue">#00AAFF</color>
 
     <drawable name = "dark_gray">#5F5F5F</drawable>
@@ -14,6 +16,8 @@
     <drawable name = "gray_blue">#2F3F4F</drawable>
     <drawable name = "gray_light_blue">#6F7F8F</drawable>
 
+    <!--GROUP_TITLE_BG-->
+    <color name="group_background_color">#5F5F5F</color>
 
     <!--reds-->
     <color name="md_red_50">#FFEBEE</color>

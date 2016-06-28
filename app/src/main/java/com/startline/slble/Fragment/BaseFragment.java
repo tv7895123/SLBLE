@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.graphics.Color;
 import android.support.v4.app.Fragment;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.RadioGroup;
@@ -35,10 +36,34 @@ public class BaseFragment extends Fragment
     private int dividerColor = Color.GRAY;
     private int iconResId = -1;
 
+    private int mPageIndex = -1;
+    protected int[] mTitleArray = null;
+    protected byte[] mInitData = null;
+    protected byte[] mModifiedData = null;
+    protected int selectPosition = -1;
 
 
+    protected Context context = null;
     private OnProgramDataChangedListener onProgramDataChangedListener;
 
+
+    protected List<Boolean> mExpandList = null;
+    protected List<Integer> mTypeList = null;
+    protected List<Map<String, Object>> mDataList = null;
+    protected ProgramTableListAdapter programTableListAdapter = null;
+    protected View mRootView;
+    protected ListView listView;
+
+
+
+    public int getIconResId()
+    {
+        return iconResId;
+    }
+    public void setIconResId(int iconResId)
+    {
+        this.iconResId = iconResId;
+    }
     public String getTitle()
     {
         return title;
@@ -73,25 +98,6 @@ public class BaseFragment extends Fragment
         return onProgramDataChangedListener;
     }
 
-    //
-    public int getIconResId()
-    {
-        return iconResId;
-    }
-    public void setIconResId(int iconResId)
-    {
-        this.iconResId = iconResId;
-    }
-
-    protected int[] mTitleArray = null;
-    protected byte[] mInitData = null;
-    protected byte[] mModifiedData = null;
-    protected int selectPosition = -1;
-
-    protected List<Boolean> mExpandList = null;
-    protected List<Integer> mTypeList = null;
-    protected List<Map<String, Object>> mDataList = null;
-    protected ProgramTableListAdapter programTableListAdapter = null;
     protected RadioGroup.OnCheckedChangeListener onCheckedChangeListener = new RadioGroup.OnCheckedChangeListener()
     {
         @Override
@@ -101,12 +107,15 @@ public class BaseFragment extends Fragment
         }
     };
 
-    protected ListView listView;
-
     public void setInitData(final byte[] data)
     {
         mInitData = data;
         mModifiedData = copyByteArray(mInitData);
+    }
+
+    protected void setPageIndex(final int index)
+    {
+        mPageIndex = index;
     }
 
     protected void customPickDialog(final Context context, final String title, final String[] items, final int defaultIndex)
@@ -186,15 +195,20 @@ public class BaseFragment extends Fragment
             mModifiedData[item] = (byte)newValue;
             updateListAdapter(true);
 
-            if(onProgramDataChangedListener != null)
-            {
-                onProgramDataChangedListener.onProgramDataChanged(mModifiedData);
-            }
+            notifyDataChanged();
         }
 
 
         LogUtil.d(TAG,"ID:"+checkedId,Thread.currentThread().getStackTrace());
         //Toast.makeText(getActivity(),"ID:"+checkedId,Toast.LENGTH_SHORT).show();
+    }
+
+    protected void notifyDataChanged()
+    {
+        if(onProgramDataChangedListener != null)
+        {
+            onProgramDataChangedListener.onProgramDataChanged(mPageIndex,mModifiedData);
+        }
     }
 
     protected void updateListAdapter(final boolean dataEnabled)
@@ -227,7 +241,7 @@ public class BaseFragment extends Fragment
 
     public void refresh()
     {
-        updateListAdapter(true);
+
     }
 
     protected String[] getItemArray(final int itemIndex)
@@ -340,5 +354,29 @@ public class BaseFragment extends Fragment
         }
 
         return copied;
+    }
+
+    protected String[] generateStringArray(final int startIndex,final int endIndex,final int step)
+    {
+        final String[] array = new String[(endIndex-startIndex)/step + 1];
+        for(int i=startIndex;i<=endIndex;i+=step)
+        {
+            array[i] = String.valueOf(i);
+        }
+
+        return array;
+    }
+
+    protected void disableEnableControls(final ViewGroup viewGroup, final boolean enable)
+    {
+        for (int i = 0; i < viewGroup.getChildCount(); i++)
+        {
+            View child = viewGroup.getChildAt(i);
+            child.setEnabled(enable);
+            if (child instanceof ViewGroup)
+            {
+                disableEnableControls((ViewGroup)child,enable);
+            }
+        }
     }
 }

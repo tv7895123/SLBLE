@@ -67,6 +67,8 @@ public class BluetoothLeIndependentService extends Service
 	//=================================================================//
 	private static final String TAG = "BLE";
 	private final String NEW_LINE_CHARACTER = "<BR/>";
+	private final int OFF = 0;
+	private final int ON = 1;
 
 	public static final int CSTA_STA = 0;
 	public static final int[] TX_POWER_LEVEL = new int[]
@@ -74,12 +76,30 @@ public class BluetoothLeIndependentService extends Service
 		-17,-15,-10,-5,0,2,4,7
 	};
 
+	private final long PRBS_FEEDBACK_TABLE[] =
+	{
+			//0b11110000010000000000000000000001
+			0b10000000000000000000001000001111
+			, /* [32, 31, 30, 29, 28, 22] */
+
+			0b10000000000000000001000000001111
+			, /* [32, 31, 30, 29, 28, 19] */
+
+			0b10010010010000000000000000010100
+			, /* [32, 29, 27,  9,  6,  3] */
+
+			0b10000000001010000001000000101000
+			, /* [32, 28, 26, 19, 12, 10] */
+
+			0b10000000000000010000001001000000
+			  /* [32, 25, 22, 15]         */
+	};
+
+
 	//--------------------------------------------------------------------
 	// Ack Flag
 	public static final int ACK_FLAG_TX_POWER = 0x1;
 	public static final int ACK_FLAG_TX_POWER_KEYLESS = 0x2;
-	public static final int ACK_FLAG_READ_PROGRAM_TABLE = 0x4;
-	public static final int ACK_FLAG_WRITE_PROGRAM_TABLE = 0x8;
 
 	//--------------------------------------------------------------------
     // Connection State
@@ -97,13 +117,6 @@ public class BluetoothLeIndependentService extends Service
 	public static final int SCAN_INTERVAL_MS = 500;
 	public static final int READ_RSSI_INTERVAL = 3000;
 	public static final long SCAN_PERIOD = 10 * 1000; // Stops scanning after 10 seconds.
-
-
-	//--------------------------------------------------------------------
-	// Task Array
-	public final int TASK_CHECK_INTERVAL = 100;
-	public static final int TIMER_TASK_PROGRAM_TABLE = 0;
-	public static final int TIMER_TASK_COUNT = 1;
 
 
     //--------------------------------------------------------------------
@@ -128,7 +141,7 @@ public class BluetoothLeIndependentService extends Service
 
 	//-------------------------------------------------------------------
 	// Keyless
-	public final int KEYLESS_CONNECT_INTERVAL = 10*1000;												// ms
+	public final int KEYLESS_CONNECT_INTERVAL = 5*1000;												// ms
 	public final int KEYLESS_CONNECT_TIME_HOUR = 3600*1000/KEYLESS_CONNECT_INTERVAL;		// Keep trying in one hour
 	public final int KEYLESS_CONNECT_TIME_DAY = KEYLESS_CONNECT_TIME_HOUR*24;				// Keep trying in one day
 	public final int KEYLESS_CONNECT_TIME_MAX = -1;
@@ -178,13 +191,8 @@ public class BluetoothLeIndependentService extends Service
 	// IPC command
 	public static final int IPC_COMMAND = 0x1000;
 	public static final int IPC_COMMAND_SCAN_RESULT = 0x1001;
-
-	// Program table
-	public static final int PROGRAM_TABLE_READ = 0;
-	public static final int PROGRAM_TABLE_WRITE = 1;
-
-	public static final int PROGRAM_TABLE_SUCCESS = 0;
-	public static final int PROGRAM_TABLE_FAIL = 1;
+	public static final int IPC_COMMAND_PROGRAM_RESULT = 0x1002;
+	public static final int IPC_COMMAND_PROGRAM_TASK_FINISH = 0x1003;
 
 	//=================================================================//
 	//																   //
@@ -227,10 +235,11 @@ public class BluetoothLeIndependentService extends Service
 	private int mConnectTimeLimit = mConnectTimeLimitScreenOn;						// Limit times, default set as ScreenOn
 
 	// ProgramTable
-	private int mProgramTableDataIndex = 0;
-	private byte mReadCheckSum = 0;
-	private byte[] mWriteTableDataBuffer = null;
-	private byte[] mReadTableDataBuffer = null;
+	private long mPrbsKey;
+	private byte mPrbsJump;
+	private int mProgramModeState = OFF;
+	private int mQueueStartIndex = 0;
+	private int mQueueEndIndex = 0;
 	//=================================================================//
 	//																   //
 	//  Object                                                         //
@@ -257,9 +266,12 @@ public class BluetoothLeIndependentService extends Service
 	private Runnable mRunnableBondToConnect = null;
 	private static Thread mThreadConnect = null;
 	private static Runnable mRunnableConnectDevice = null;
+	private static Thread mThreadProgram = null;
 
-	private MyTimerTask[] mTimerTaskPool = null;
+
 	private Thread mThreadTimer = null;
+	private TaskObject[] mTaskQueue = null;
+	private TaskObject mCurrentTask = null;
 	//=================================================================//
 	//																   //
 	//  Custom  Class		                                           //
@@ -287,11 +299,35 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	public class MyTimerTask
+	public class TaskObject
 	{
-		public long expiredTime;
-		public Runnable task;
+		public static final int STATE_IDLE = 0;
+		public static final int STATE_WAIT = 1;
+
+		public int state;				// IDLE,WAIT
+		public byte taskCommand;
+		public byte taskParameter;
+
+		public Object taskData;
+
+		public long timeout;
+		public long updateTime;
 	}
+
+	public class ProgramData
+	{
+		public int dataId;			// AF,SF,LNT,CH
+
+		public byte addressHigh;	// START-ADDRESS
+		public byte addressLow;		// START ADDRESS
+		public int dataLength;		// TOTAL DATA LENGTH
+		public int dataCount;		//
+		public byte[] dataBuffer;
+
+		public byte subAddressHigh;
+		public byte subAddressLow;
+	}
+
 	//=================================================================//
 	//																   //
 	//  Global defined Object                                          //
@@ -401,8 +437,27 @@ public class BluetoothLeIndependentService extends Service
 							{
 								LogUtil.d(TAG,"mRunnableBondToConnect",Thread.currentThread().getStackTrace());
 
-								mDeviceInitState = INIT_STATE_BOND_OK;
-								createBTConnection();
+								if(isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+								{
+									// Timeout and disconnect, wait next connected
+									if(mBluetoothDevice != null && mInputDeviceProfile != null)
+									{
+										closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
+									}
+								}
+								else
+								{
+									if(mRunnableBondToConnect != null)
+									{
+										mHandler.removeCallbacks(mRunnableBondToConnect);
+										mRunnableBondToConnect = null;
+									}
+
+									mDeviceInitState = INIT_STATE_BOND_OK;
+									//closeBTConnection(bluetoothDevice.getAddress());
+
+									_connect();
+								}
 							}
 						};
 
@@ -636,7 +691,7 @@ public class BluetoothLeIndependentService extends Service
 						if(!deviceName.equals(KEYWORD_SLBLE))
 						{
 							appendLog(formatConnectionString("Unsupported device !!!"));
-							disconnect(false);  //Unsupported device
+							//disconnect(false);  //Unsupported device
 							return;
 						}
 
@@ -993,7 +1048,7 @@ public class BluetoothLeIndependentService extends Service
 		context = this;
 		serviceInstance = this;
 
-		mTimerTaskPool = new MyTimerTask[TIMER_TASK_COUNT];
+		mTaskQueue = new TaskObject[8];
 
 		loadAppSetting(readAppSetting());
 		loadBleSetting(readBleSetting());
@@ -1180,96 +1235,6 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-
-	private void setProgramTableTimerTask(final int action)
-	{
-		final MyTimerTask myTimerTask = new MyTimerTask();
-		myTimerTask.expiredTime = System.currentTimeMillis() + 600;
-		myTimerTask.task = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				appendLog("Program table data timeout");
-				final Message message = new Message();
-				message.arg1 = action;
-				message.arg2 = PROGRAM_TABLE_FAIL;
-				sendCallbackMessage(message);
-
-				//Toast.makeText(context,"Program table data timeout",Toast.LENGTH_SHORT).show();
-			}
-		};
-
-		setTimerTask(TIMER_TASK_PROGRAM_TABLE,myTimerTask);
-	}
-
-
-	private void setTimerTask(final int taskIndex,final MyTimerTask myTimerTask)
-	{
-		if(mTimerTaskPool[taskIndex] != null)
-		{
-			Toast.makeText(context,String.format("Timer task [%d] already running",taskIndex),Toast.LENGTH_SHORT).show();
-			return;
-		}
-		else
-		{
-			mTimerTaskPool[taskIndex] = myTimerTask;
-		}
-
-		if(mThreadTimer == null)
-		{
-			mThreadTimer = new Thread(
-				new Runnable()
-				{
-					@Override
-					public void run()
-					{
-						boolean gotException = false;
-
-						while(!gotException)																			// No exception
-						{
-							try
-							{
-								MyTimerTask task;
-								int pendingTask = 0;
-								for(int i=0;i<TIMER_TASK_COUNT;i++)
-								{
-									task = mTimerTaskPool[i];
-									if(task != null)
-									{
-										pendingTask++;
-										if(System.currentTimeMillis()>task.expiredTime)
-										{
-											mTimerTaskPool[i] = null;
-											mHandler.post(task.task);
-										}
-									}
-								}
-								if(pendingTask == 0)
-									break;
-								Thread.sleep(TASK_CHECK_INTERVAL);
-							}
-							catch (InterruptedException e)
-							{
-								gotException = true;
-								e.printStackTrace();
-							}
-						}
-						mThreadTimer = null;
-						LogUtil.d(getPackageName(),"Leaving _connect loop.",Thread.currentThread().getStackTrace());
-					}
-				}
-			);
-
-			mThreadTimer.start();
-		}
-	}
-
-	private void updateTimerTask(final int taskIndex,final MyTimerTask myTimerTask)
-	{
-		mTimerTaskPool[taskIndex] = myTimerTask;
-	}
-
 	private void setupTimerTask(final Runnable task,final long delay,final long period)
 	{
 		if(task == null || delay < 0) return;
@@ -1402,6 +1367,7 @@ public class BluetoothLeIndependentService extends Service
         else
             return false;
     }
+
 	private void initDeviceState(final int nextState)
 	{
 		try
@@ -1466,6 +1432,11 @@ public class BluetoothLeIndependentService extends Service
 		{
 			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
 		}
+	}
+
+	public boolean isInProgramMode()
+	{
+		return mProgramModeState == ON;
 	}
 
 	private int[] sortArray(final int[] array,final int length, final int latestIndex)
@@ -2302,6 +2273,7 @@ public class BluetoothLeIndependentService extends Service
 		try
 		{
 			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+			mProgramModeState = OFF;
 
 			// Clear timer when disconnected, avoid re-connect automatically
 			removeConnectionTimeout(); //handleBleDisconnect
@@ -2385,8 +2357,8 @@ public class BluetoothLeIndependentService extends Service
 
 	private boolean handleReceiveCsta(final byte[] receiveData,final boolean sendAck)
 	{
-		final int cstaLength = (receiveData[PACKET_PARAMETER]>>4) & 0x0F;
-		final int cstaSequence = receiveData[PACKET_PARAMETER] & 0x0F;
+		final int cstaLength = (receiveData[FIELD_PARAMETER]>>4) & 0x0F;
+		final int cstaSequence = receiveData[FIELD_PARAMETER] & 0x0F;
 
 		final String s = formatByteArrayToLog(receiveData);
 		LogUtil.d(TAG,"[Process] Receive Csta : " + s,Thread.currentThread().getStackTrace());
@@ -2461,10 +2433,10 @@ public class BluetoothLeIndependentService extends Service
 			}
 
 			// If receive error message ,
-			if(receiveData[PACKET_COMMAND] == CMD_ERROR_MESSAGE)
+			if(receiveData[FIELD_COMMAND] == CMD_ERROR_MESSAGE)
 			{
 				LogUtil.d(TAG, "[Process] Receive ERROR_MESSAGE",Thread.currentThread().getStackTrace());
-				appendLog(formatErrorString("Receive ERROR_MESSAGE : 0x" + String.format("%02X", receiveData[PACKET_PARAMETER])));
+				appendLog(formatErrorString("Receive ERROR_MESSAGE : 0x" + String.format("%02X", receiveData[FIELD_PARAMETER])));
 
 				clearAckFlag();
 
@@ -2486,19 +2458,14 @@ public class BluetoothLeIndependentService extends Service
 	{
 		try
 		{
-			switch ((int)receiveData[PACKET_COMMAND])
+			switch (receiveData[FIELD_COMMAND])
 			{
 				case CMD_ACK:
 				{
 					final int ackFlag = getAckFlag();
 					if(ackFlag>0)
 					{
-						if((ackFlag & ACK_FLAG_WRITE_PROGRAM_TABLE) > 0)
-						{
-							updateTimerTask(TIMER_TASK_PROGRAM_TABLE,null);
-							sendProgramTableData();
-						}
-						else if((ackFlag & ACK_FLAG_TX_POWER) >0)
+						if((ackFlag & ACK_FLAG_TX_POWER) >0)
 						{
 							clearAckFlag(ACK_FLAG_TX_POWER);
 							readTxPower();
@@ -2522,8 +2489,8 @@ public class BluetoothLeIndependentService extends Service
 				case CMD_CHECK_CONNECTION:
 				{
 					final byte[] writeData = new byte[PACKET_LENGTH];
-					writeData[PACKET_ID] = receiveData[PACKET_ID];
-					writeData[PACKET_COMMAND] = receiveData[PACKET_COMMAND];
+					writeData[FIELD_ID] = receiveData[FIELD_ID];
+					writeData[FIELD_COMMAND] = receiveData[FIELD_COMMAND];
 
 					final String s = formatByteArrayToLog(receiveData);
 					LogUtil.d(TAG, "Receive Ping " + s,Thread.currentThread().getStackTrace());
@@ -2535,7 +2502,7 @@ public class BluetoothLeIndependentService extends Service
 				case CMD_SETTING_INFORMATION:
 				{
                     // Receive response from device
-					if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_RESPONSE)
+					if(receiveData[FIELD_PARAMETER] == PARAM_SETTING_RESPONSE)
                     {
 						final byte[] data = subByteArray(receiveData,3,16);
 						loadBleSetting(data);
@@ -2544,42 +2511,107 @@ public class BluetoothLeIndependentService extends Service
 
 						final Message message = new Message();
 						message.arg1 = PARAM_SETTING_INFORMATION;
-						message.arg2 = (int)receiveData[PACKET_PARAMETER];
+						message.arg2 = (int)receiveData[FIELD_PARAMETER];
 						message.obj = data;
 						sendCallbackMessage(message);
                     }
 					// Receive response from device, check if data is match we sent before
-					else if(receiveData[PACKET_PARAMETER] == PARAM_SETTING_WRITE)
+					else if(receiveData[FIELD_PARAMETER] == PARAM_SETTING_WRITE)
 					{
 						final byte[] data = subByteArray(receiveData,3,16);
 
 						final Message message = new Message();
 						message.arg1 = PARAM_SETTING_INFORMATION;
-						message.arg2 = (int)receiveData[PACKET_PARAMETER];
+						message.arg2 = (int)receiveData[FIELD_PARAMETER];
 						message.obj = data;
 						sendCallbackMessage(message);
 					}
 				}
 				break;
-				case CMD_PROGRAM_TABLE_HEADER:
+
+				case CMD_PROGRAM_INTERFACE:
 				{
-					if(receiveData[PACKET_PARAMETER] == PARAM_READ_PROGRAM_TABLE)
+					if(receiveData[FIELD_PARAMETER] == PARAM_BLE_INTO_PROGRAM_INTERFACE)
 					{
-						setAckFlag(ACK_FLAG_READ_PROGRAM_TABLE);
-						mReadCheckSum = receiveData[18];
-						sendAck(true);
-						setProgramTableTimerTask(PROGRAM_TABLE_READ);
+						mProgramModeState = ON;
+						final byte[] longBytes = new byte[8];
+						longBytes[0] = receiveData[3];
+						longBytes[1] = receiveData[4];
+						longBytes[2] = receiveData[5];
+						longBytes[3] = receiveData[6];
+						mPrbsKey = byteArrayToLong(longBytes,ByteOrder.LITTLE_ENDIAN);
+						mPrbsJump = receiveData[7];
+
+						appendLog("PRBS Key : " + NEW_LINE_CHARACTER + formatByteArrayToLog(longToBytes(mPrbsKey,ByteOrder.BIG_ENDIAN)));
+						appendLog("PRBS Jump : " + String.format("%02X",mPrbsJump));
+						LogUtil.d(TAG,"PRBS Key : " + formatByteArrayToLog(longToBytes(mPrbsKey,ByteOrder.BIG_ENDIAN)),Thread.currentThread().getStackTrace());
+						LogUtil.d(TAG,"PRBS Jump : " + String.format("%02X",mPrbsJump),Thread.currentThread().getStackTrace());
+						if(mCurrentTask != null && mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE && mCurrentTask.taskParameter == PARAM_ASK_INTO_PROGRAM_INTERFACE)
+						{
+							final ProgramData programData = (ProgramData)(mCurrentTask.taskData);
+							if(programData != null)
+							{
+								programData.dataCount = 1;
+							}
+							mCurrentTask.state = TaskObject.STATE_IDLE;
+						}
+					}
+					else if(receiveData[FIELD_PARAMETER] == PARAM_BLE_LEAVE_PROGRAM_INTERFACE)
+					{
+						mProgramModeState = OFF;
+						mPrbsKey = 0;
+						mPrbsJump = 0;
+						if(mCurrentTask != null && mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE && mCurrentTask.taskParameter == PARAM_ASK_LEAVE_PROGRAM_INTERFACE)
+						{
+							final ProgramData programData = (ProgramData)(mCurrentTask.taskData);
+							if(programData != null)
+							{
+								programData.dataCount = 1;
+							}
+							mCurrentTask.state = TaskObject.STATE_IDLE;
+						}
 					}
 				}
 				break;
-				case CMD_PROGRAM_TABLE_DATA:
+
+				case CMD_PROGRAM_DATA:
 				{
-					final int ackFlag = getAckFlag();
-					if((ackFlag & ACK_FLAG_READ_PROGRAM_TABLE) > 0)
+					if(mCurrentTask == null)
 					{
-						updateTimerTask(TIMER_TASK_PROGRAM_TABLE,null);
-						sendAck(true);
-						saveProgramData(receiveData);
+						return;
+					}
+
+					if(mCurrentTask.taskCommand != CMD_PROGRAM_DATA)
+					{
+						return;
+					}
+
+					final ProgramData programData = (ProgramData)mCurrentTask.taskData;
+					if(programData == null)
+					{
+						return;
+					}
+
+					// Check address
+					if(programData.subAddressHigh == receiveData[FIELD_PROGRAM_ADDRESS_HIGH_BYTE] && programData.subAddressLow == receiveData[FIELD_PROGRAM_ADDRESS_LOW_BYTE])
+					{
+						// Reply READ data
+						if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_DEAD_DATA)
+						{
+							final byte[] data = subByteArray(receiveData,FIELD_PROGRAM_DATA,receiveData[FIELD_PROGRAM_DATA_LENGTH]);
+							appendLog("Decode data : " + NEW_LINE_CHARACTER + formatByteArrayToLog(data));
+							prbsEncodeDecode(data,data.length);
+							appendLog("-->" + formatByteArrayToLog(data));
+							fillData(programData.dataBuffer,programData.dataCount,data);
+							mCurrentTask.state = TaskObject.STATE_IDLE;
+							programData.dataCount = programData.dataCount + data.length;
+						}
+						// Reply WRITE data
+						else if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_WRITE_DATA)
+						{
+							mCurrentTask.state = TaskObject.STATE_IDLE;
+							programData.dataCount = programData.dataCount + receiveData[FIELD_PROGRAM_DATA_LENGTH];
+						}
 					}
 				}
 				break;
@@ -2597,10 +2629,10 @@ public class BluetoothLeIndependentService extends Service
 		appendLog(formatSendString("Send RequestSetting"));
 		// Init packet content
 		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = getRandom(255);
-		writeData[PACKET_COMMAND] = CMD_SETTING_INFORMATION;
-		writeData[PACKET_PARAMETER] = PARAM_SETTING_REQUEST;
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_SETTING_INFORMATION;
+		writeData[FIELD_PARAMETER] = PARAM_SETTING_REQUEST;
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 		sendPlainData(writeData);
 	}
@@ -2612,13 +2644,13 @@ public class BluetoothLeIndependentService extends Service
 
 		final byte[] writeData = new byte[PACKET_LENGTH];
 		if(keepRandom)
-			writeData[PACKET_ID] = mReceivedData[PACKET_ID];
+			writeData[FIELD_ID] = mReceivedData[FIELD_ID];
 		else
-			writeData[PACKET_ID] = getRandom(255);
+			writeData[FIELD_ID] = getRandom(255);
 
-		writeData[PACKET_COMMAND] = CMD_ERROR_MESSAGE;
-		writeData[PACKET_PARAMETER] = (byte)errorCode;
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_COMMAND] = CMD_ERROR_MESSAGE;
+		writeData[FIELD_PARAMETER] = (byte)errorCode;
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 		sendPlainData(writeData);
 	}
 
@@ -2629,13 +2661,13 @@ public class BluetoothLeIndependentService extends Service
 
 		final byte[] writeData = new byte[PACKET_LENGTH];
 		if(keepRandom)
-			writeData[PACKET_ID] = mReceivedData[PACKET_ID];
+			writeData[FIELD_ID] = mReceivedData[FIELD_ID];
 		else
-			writeData[PACKET_ID] = getRandom(255);
+			writeData[FIELD_ID] = getRandom(255);
 
-		writeData[PACKET_COMMAND] = CMD_ACK;
-		writeData[PACKET_PARAMETER] = (byte)PARAM_NONE;
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_COMMAND] = CMD_ACK;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 
 //		final String s = formatByteArrayToLog(writeData);
@@ -2651,10 +2683,10 @@ public class BluetoothLeIndependentService extends Service
         appendLog(formatSendString("Send RequestCsta"));
 
         final byte[] writeData = new byte[PACKET_LENGTH];
-        writeData[PACKET_ID] = getRandom(255);
-        writeData[PACKET_COMMAND] = CMD_CAR_STATUS;
-        writeData[PACKET_PARAMETER] = (byte)PARAM_NONE;
-        writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+        writeData[FIELD_ID] = getRandom(255);
+        writeData[FIELD_COMMAND] = CMD_CAR_STATUS;
+        writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
+        writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
         sendPlainData(writeData);
     }
 
@@ -2665,12 +2697,12 @@ public class BluetoothLeIndependentService extends Service
 
 		final byte[] writeData = new byte[PACKET_LENGTH];
 		if(keepId)
-			writeData[PACKET_ID] = mReceivedData[PACKET_ID];
+			writeData[FIELD_ID] = mReceivedData[FIELD_ID];
 		else
-			writeData[PACKET_ID] = getRandom(255);
-		writeData[PACKET_COMMAND] = CMD_CHECK_CONNECTION;
-		writeData[PACKET_PARAMETER] = (byte)PARAM_NONE;
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+			writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_CHECK_CONNECTION;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 		sendPlainData(writeData);
 	}
@@ -2682,16 +2714,16 @@ public class BluetoothLeIndependentService extends Service
 			if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
 
 			final byte[] writeData = new byte[PACKET_LENGTH];
-			writeData[PACKET_ID] = getRandom(255);
-			writeData[PACKET_COMMAND] = CMD_PHONE_CONTROL_COMMAND;
-			writeData[PACKET_PARAMETER] = (byte)PARAM_NONE;
+			writeData[FIELD_ID] = getRandom(255);
+			writeData[FIELD_COMMAND] = CMD_PHONE_CONTROL_COMMAND;
+			writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
 
 			final byte[] data = generateRandomArray(16,1);
 			data[0] = (byte)cmd;
 			fillData(writeData,data);
 
 			// fill check sum
-			writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+			writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 
 			final String s = formatByteArrayToLog(writeData);
@@ -2724,16 +2756,16 @@ public class BluetoothLeIndependentService extends Service
 		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
 
 		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = getRandom(255);
-		writeData[PACKET_COMMAND] = CMD_TX_POWER;
-		writeData[PACKET_PARAMETER] = (byte)param;
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_TX_POWER;
+		writeData[FIELD_PARAMETER] = (byte)param;
 
 		final byte[] data = new byte[16];
 		data[0] = (byte)level;
 		fillData(writeData,data);
 
 		// fill check sum
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 
 		final String s = formatByteArrayToLog(writeData);
@@ -2748,14 +2780,14 @@ public class BluetoothLeIndependentService extends Service
 		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
 
 		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = getRandom(255);
-		writeData[PACKET_COMMAND] = CMD_SETTING_INFORMATION;
-		writeData[PACKET_PARAMETER] = (byte)PARAM_SETTING_WRITE;
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_SETTING_INFORMATION;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_SETTING_WRITE;
 
 		fillData(writeData,data);
 
 		// fill check sum
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 
 		final String s = formatByteArrayToLog(writeData);
@@ -2765,96 +2797,466 @@ public class BluetoothLeIndependentService extends Service
 		sendPlainData(writeData);
 	}
 
-	public void readProgramTable(final int addHigh,final int addLow,final int length)
+	private void clearTaskQueue()
 	{
-		mReadTableDataBuffer = new byte[length];
-		mProgramTableDataIndex = 0;
-
-		sendProgramTableHeader(PARAM_READ_PROGRAM_TABLE,addHigh,addLow,length);
+		mQueueStartIndex = 0;
+		mQueueEndIndex = 0;
 	}
 
-	public void writeProgramTable(final int addHigh,final int addLow,final byte[] data)
+	private boolean isTaskQueueFull()
 	{
-		mWriteTableDataBuffer = data;
-		//mWriteTableDataBuffer = generateRandomArray(32,10);
-		final String s = formatByteArrayToLog(mWriteTableDataBuffer);
-		LogUtil.d(TAG, "Generate ProgramTable data  : " + s,Thread.currentThread().getStackTrace());
-		appendLog(formatSendString("Generate ProgramTable data  : "+ NEW_LINE_CHARACTER + s));
-
-		mProgramTableDataIndex = 0;
-		setAckFlag(ACK_FLAG_WRITE_PROGRAM_TABLE);
-
-		sendProgramTableHeader(PARAM_WRITE_PROGRAM_TABLE,addHigh,addLow,mWriteTableDataBuffer.length);
-	}
-
-	public void sendProgramTableHeader(final int parameter,final int addHigh,final int addLow,final int length)
-	{
-		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
-
-		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = getRandom(255);
-		writeData[PACKET_COMMAND] = (byte)CMD_PROGRAM_TABLE_HEADER;
-		writeData[PACKET_PARAMETER] = (byte)parameter;
-		writeData[PACKET_TOTAL_DATA_LENGTH] = (byte)length;
-		writeData[PACKET_ADDRESS_HIGH_BYTE] = (byte)addHigh;
-		writeData[PACKET_ADDRESS_LOW_BYTE] = (byte)addLow;
-
-		// Read
-		int action = PROGRAM_TABLE_READ;
-		if(parameter == PARAM_READ_PROGRAM_TABLE)
+		if(mQueueStartIndex == (mQueueEndIndex+1)%mTaskQueue.length)
 		{
-
-		}
-		// Write
-		else
-		{
-			action = PROGRAM_TABLE_WRITE;
-			writeData[PACKET_PROGRAM_DATA_CHECK_SUM] = getCheckSum(mWriteTableDataBuffer);
+			LogUtil.d(TAG,"Queue is full", Thread.currentThread().getStackTrace());
+			return true;
 		}
 
-
-		// fill check sum
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
-
-
-		final String s = formatByteArrayToLog(writeData);
-		LogUtil.d(TAG, " Send ProgramTableHeader"+s,Thread.currentThread().getStackTrace());
-		appendLog(formatSendString("Send ProgramTableHeader"));
-
-		sendPlainData(writeData);
-
-		setProgramTableTimerTask(action);
+		return false;
 	}
 
-	public void sendProgramTableData()
+	private void startProgramThread()
 	{
-		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
-		if(mProgramTableDataIndex >= mWriteTableDataBuffer.length)
+		if(mThreadProgram != null)
 		{
-			LogUtil.d(TAG, "No program data to send",Thread.currentThread().getStackTrace());
-			appendLog(formatSendString("No program data to send"));
-			clearAckFlag(ACK_FLAG_WRITE_PROGRAM_TABLE);
 			return;
 		}
 
-		final byte[] writeData = new byte[PACKET_LENGTH];
-		writeData[PACKET_ID] = (mWriteTableDataBuffer.length-mProgramTableDataIndex) >= PACKET_PROGRAM_DATA_LENGTH ? (byte)PACKET_PROGRAM_DATA_LENGTH : (byte)(mWriteTableDataBuffer.length-mProgramTableDataIndex);
-		writeData[PACKET_COMMAND] = (byte)CMD_PROGRAM_TABLE_DATA;
+		mThreadProgram = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				boolean getException = false;
 
-		fillData(writeData,PACKET_PROGRAM_DATA,subByteArray(mWriteTableDataBuffer,mProgramTableDataIndex,17));
-		mProgramTableDataIndex += 17;
+//				// Check and into program mode at thread started
+//				if(!isInProgramMode())
+//				{
+//					mCurrentTask  = new TaskObject();
+//					mCurrentTask.taskAction = TaskObject.ACTION_INTO_PROGRAM_MODE;
+//					mCurrentTask.state = TaskObject.STATE_WAIT;
+//					mCurrentTask.updateTime = System.currentTimeMillis();
+//
+//					sendIntoProgramMode();
+//				}
+
+				while(!getException)
+				{
+					try
+					{
+						// Pop task from queue
+						if(mCurrentTask == null)
+						{
+							mCurrentTask = getTaskFromQueue();
+						}
+
+						if(mCurrentTask == null)
+						{
+							throw new Exception("No task to be executed");
+						}
+
+//						if(!isDeviceInitialized())
+//						{
+//							Toast.makeText(context,"Device is disconnected.",Toast.LENGTH_SHORT).show();
+//
+//							throw new Exception("Disconnected");
+//						}
+
+						if(!isInProgramMode())
+						{
+							if(mCurrentTask.taskCommand == CMD_PROGRAM_DATA)
+							{
+								notifyProgramResult(mCurrentTask);
+								mCurrentTask = null;
+								LogUtil.d(TAG,"Not in program mode , skip action",Thread.currentThread().getStackTrace());
+								continue;
+							}
+						}
+
+						// Wait response
+						if(mCurrentTask.state == TaskObject.STATE_WAIT)
+						{
+							// Timeout
+							if(System.currentTimeMillis() > mCurrentTask.updateTime + mCurrentTask.timeout)
+							{
+								LogUtil.d(TAG,String.format("Command  %d timeout",mCurrentTask.taskCommand),Thread.currentThread().getStackTrace());
+								notifyProgramResult(mCurrentTask);
+								mCurrentTask = null;
+							}
+						}
+						// Idle
+						else
+						{
+							if(mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE || mCurrentTask.taskCommand == CMD_PROGRAM_DATA)
+							{
+								final ProgramData programData = (ProgramData)mCurrentTask.taskData;
+								if(programData == null)
+								{
+									continue;
+								}
+
+								// Task finish
+								if(programData.dataCount == programData.dataLength)
+								{
+									if(mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE)
+									{
+										// Into Program mode
+										if(mCurrentTask.taskParameter == PARAM_ASK_INTO_PROGRAM_INTERFACE)
+										{
+											LogUtil.d(TAG,"Into Program mode.",Thread.currentThread().getStackTrace());
+											appendLog("Into Program mode");
+										}
+										// Exit Program mode
+										else if(mCurrentTask.taskParameter == PARAM_ASK_LEAVE_PROGRAM_INTERFACE)
+										{
+											LogUtil.d(TAG,"Exit Program mode.",Thread.currentThread().getStackTrace());
+											appendLog("Exit Program mode");
+										}
+									}
+									else
+									{
+										// Read
+										if(mCurrentTask.taskParameter == PARAM_READ_PROGRAM_DATA)
+										{
+											final String s = formatByteArrayToLog(programData.dataBuffer);
+											LogUtil.d(TAG,"Read finish : " + s,Thread.currentThread().getStackTrace());
+											appendLog(String.format("Read 0x%02d 0x%02d",programData.addressHigh,programData.addressLow) + NEW_LINE_CHARACTER + s);
+										}
+										// Write
+										else if(mCurrentTask.taskParameter == PARAM_WRITE_PROGRAM_DATA)
+										{
+											final String s = formatByteArrayToLog(programData.dataBuffer);
+											LogUtil.d(TAG,"Write finish: " + s,Thread.currentThread().getStackTrace());
+											appendLog(String.format("Write 0x%02d 0x%02d",programData.addressHigh,programData.addressLow) + NEW_LINE_CHARACTER + s);
+										}
+									}
+
+									notifyProgramResult(mCurrentTask);
+									mCurrentTask = null;
+								}
+								else
+								{
+									final byte[] add = calculateOffsetAddress(programData.addressHigh, programData.addressLow, programData.dataCount);
+									final int length = (programData.dataLength - programData.dataCount) > PACKET_PROGRAM_DATA_LENGTH ? PACKET_PROGRAM_DATA_LENGTH : programData.dataLength - programData.dataCount;
+									programData.subAddressHigh = add[0];
+									programData.subAddressLow = add[1];
+
+
+									if(mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE)
+									{
+										// Into Program mode
+										if(mCurrentTask.taskParameter == PARAM_ASK_INTO_PROGRAM_INTERFACE)
+										{
+											sendIntoProgramMode();
+										}
+										// Exit Program mode
+										else if(mCurrentTask.taskParameter == PARAM_ASK_LEAVE_PROGRAM_INTERFACE)
+										{
+											sendExitProgramMode();
+										}
+									}
+									else
+									{
+										// Read
+										if(mCurrentTask.taskParameter == PARAM_READ_PROGRAM_DATA)
+										{
+											sendProgramTablePacket(PARAM_READ_PROGRAM_DATA,add[0],add[1],length,null);
+
+	//										mHandler.postDelayed(new Runnable()
+	//										{
+	//											@Override
+	//											public void run()
+	//											{
+	//												final byte[] temp = new byte[]{0x01,CMD_PROGRAM_DATA,PARAM_TX_REPLY_DEAD_DATA,mCurrentTask.subAddressHigh,mCurrentTask.subAddressLow,(byte)length,1,0,1,1,1,1,1,1,1,1,0,0,0,(byte)0x22};
+	//												handleInActiveCommandFunction(temp);
+	//											}
+	//										},100);
+										}
+										// Write
+										else if(mCurrentTask.taskParameter == PARAM_WRITE_PROGRAM_DATA)
+										{
+											final byte[] data = subByteArray(programData.dataBuffer,programData.dataCount,length);
+											prbsEncodeDecode(data,data.length);
+											sendProgramTablePacket(PARAM_WRITE_PROGRAM_DATA,add[0],add[1],length,data);
+
+	//										mHandler.postDelayed(new Runnable()
+	//										{
+	//											@Override
+	//											public void run()
+	//											{
+	//												final byte[] temp = new byte[]{0x01,CMD_PROGRAM_DATA,PARAM_TX_REPLY_WRITE_DATA,mCurrentTask.subAddressHigh,mCurrentTask.subAddressLow,(byte)length,1,2,3,4,5,6,7,8,9,10,11,12,13,(byte)0xD9};
+	//												handleInActiveCommandFunction(temp);
+	//											}
+	//										},100);
+										}
+									}
+
+
+									mCurrentTask.state = TaskObject.STATE_WAIT;
+									mCurrentTask.updateTime = System.currentTimeMillis();
+								}
+							}
+						}
+
+						Thread.sleep(200);
+					}
+					catch (Exception e)
+					{
+						mCurrentTask = null;
+						clearTaskQueue();
+						LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
+						break;
+					}
+				}
+
+				LogUtil.d(TAG,"Exit Program thread loop.",Thread.currentThread().getStackTrace());
+				mThreadProgram = null;
+				notifyProgramTaskFinish();
+			}
+		});
+
+		mThreadProgram.start();
+	}
+
+	private void prbsEncodeDecode(final byte[] data, final int dataLength)
+	{
+		long localKey = mPrbsKey;
+
+		LogUtil.d(TAG,"Init PRBS KEY = " + formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN)), Thread.currentThread().getStackTrace());
+		for(int i=0;i<dataLength;i++)
+		{
+			data[i] = (byte)(data[i] ^ (localKey & 0xFF));
+
+			// change the key according to the specified jump amount
+			for(int j=0;j<mPrbsJump;j++)
+			{
+				// if the last bit will effect the feed back
+				if((localKey & 0x00000001) > 0)
+				{
+					//calculate new key
+					localKey = ((localKey>>1)^(PRBS_FEEDBACK_TABLE[0]))& 0x00000000FFFFFFFFL;
+				}
+				//otherwise just shift the key
+				else
+				{
+					localKey = localKey>>1;
+				}
+
+				//LogUtil.d(TAG,String.format("PRBS KEY[%d][%d] = %s",i,j, formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN))), Thread.currentThread().getStackTrace());
+			}
+
+
+		}
+	}
+
+
+	private byte[] calculateOffsetAddress(final byte addHigh,final byte addLow,final int length)
+	{
+		final byte[] add = new byte[2];
+		int iAddHigh = (int)addHigh;
+		int iAddLow = (int)addLow;
+
+		iAddLow = iAddLow + length;
+		if(iAddLow > 255)
+		{
+			iAddHigh = iAddHigh + 1;
+		}
+
+		add[0] = (byte)iAddHigh;
+		add[1] = (byte)iAddLow;
+
+		return add;
+	}
+
+	private ProgramData genProgramData(final int id,final int addHigh,final int addLow,final int length,final byte[] data)
+	{
+		final ProgramData programData = new ProgramData();
+		programData.dataId = id;
+		programData.addressHigh = (byte)addHigh;
+		programData.addressLow = (byte)addLow;
+		programData.dataLength = length;
+		programData.dataCount = 0;
+		if(data == null)
+		{
+			programData.dataBuffer = new byte[length];
+		}
+		else
+		{
+			programData.dataBuffer = data;
+		}
+
+		return programData;
+	}
+
+	private void addTaskToQueue(final byte cmd,final byte parameter,final long timeout,final Object data)
+	{
+		final TaskObject taskObject = new TaskObject();
+		taskObject.taskCommand = cmd;
+		taskObject.taskParameter = parameter;
+		taskObject.timeout = timeout;
+		taskObject.taskData = data;
+
+		mQueueEndIndex = (mQueueEndIndex + 1) % mTaskQueue.length;
+		mTaskQueue[mQueueEndIndex] = taskObject;
+
+		startProgramThread();
+	}
+
+	private TaskObject getTaskFromQueue()
+	{
+		if(mQueueStartIndex == mQueueEndIndex)
+		{
+			LogUtil.d(TAG,"Queue is empty", Thread.currentThread().getStackTrace());
+			return null;
+		}
+
+		mQueueStartIndex = (mQueueStartIndex + 1) % mTaskQueue.length;
+		return mTaskQueue[mQueueStartIndex];
+	}
+
+	public void readProgramTable(final int id,final int addHigh,final int addLow,final int length)
+	{
+		if(isTaskQueueFull())
+		{
+			return;
+		}
+
+		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_READ_PROGRAM_DATA,5000,genProgramData(id,addHigh,addLow,length,null));
+	}
+
+	public void writeProgramTable(final int id,final int addHigh,final int addLow,final byte[] data)
+	{
+		if(isTaskQueueFull())
+		{
+			return;
+		}
+
+		final String s = formatByteArrayToLog(data);
+		LogUtil.d(TAG, "WriteProgramTable  : " + s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("WriteProgramTable  : "+ NEW_LINE_CHARACTER + s));
+
+
+		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_WRITE_PROGRAM_DATA,5000,genProgramData(id,addHigh,addLow,data.length,data));
+	}
+
+	public void sendProgramTablePacket(final int parameter,final int addHigh,final int addLow,final int length,final byte[] data)
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = (byte)CMD_PROGRAM_DATA;
+		writeData[FIELD_PARAMETER] = (byte)parameter;
+		writeData[FIELD_PROGRAM_ADDRESS_HIGH_BYTE] = (byte)addHigh;
+		writeData[FIELD_PROGRAM_ADDRESS_LOW_BYTE] = (byte)addLow;
+		writeData[FIELD_PROGRAM_DATA_LENGTH] = (byte)length;
+
+
+		// Write
+		if(parameter == PARAM_WRITE_PROGRAM_DATA)
+		{
+			if(data == null)
+			{
+				return;
+			}
+
+			if(length == data.length )
+			{
+				fillData(writeData,FIELD_PROGRAM_DATA,data);
+			}
+			else if(length < data.length)
+			{
+				fillData(writeData,FIELD_PROGRAM_DATA,subByteArray(data,0,length));
+			}
+			else
+			{
+				return;
+			}
+		}
 
 		// fill check sum
-		writeData[PACKET_CHECK_SUM] = getCheckSum(writeData);
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 
 		final String s = formatByteArrayToLog(writeData);
-		LogUtil.d(TAG, " Send ProgramTableData : "+s,Thread.currentThread().getStackTrace());
-		appendLog(formatSendString("Send ProgramTableData"));
+		LogUtil.d(TAG, "sendProgramTablePacket : "+s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("sendProgramTablePacket"));
 
 		sendPlainData(writeData);
+	}
 
-		setProgramTableTimerTask(PROGRAM_TABLE_WRITE);
+	public void askIntoProgramMode()
+	{
+		if(isTaskQueueFull())
+		{
+			return;
+		}
+
+		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_INTO_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,1,null));
+	}
+
+	public void askExitProgramMode()
+	{
+		clearTaskQueue();
+
+		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,1,null));
+	}
+
+	public void sendIntoProgramMode()
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[FIELD_ID] = getRandom(16);
+		writeData[FIELD_COMMAND] = (byte)CMD_PROGRAM_INTERFACE;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_ASK_INTO_PROGRAM_INTERFACE;
+
+
+		// fill check sum
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
+
+
+		final String s = formatByteArrayToLog(writeData);
+		LogUtil.d(TAG, "Send Into Program mode : "+s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send Into Program mode"));
+
+		sendPlainData(writeData);
+	}
+
+	public void sendExitProgramMode()
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[FIELD_ID] = getRandom(16);
+		writeData[FIELD_COMMAND] = (byte)CMD_PROGRAM_INTERFACE;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE;
+
+		// fill check sum
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
+
+
+		final String s = formatByteArrayToLog(writeData);
+		LogUtil.d(TAG, "Send Exit Program mode : "+s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send Exit Program mode"));
+
+		sendPlainData(writeData);
+	}
+
+	private void notifyProgramResult(final TaskObject taskObject)
+	{
+		final Message message = new Message();
+		message.arg1 = IPC_COMMAND_PROGRAM_RESULT;
+		message.obj = taskObject;
+
+		sendCallbackMessage(message);
+	}
+
+	private void notifyProgramTaskFinish()
+	{
+		final Message message = new Message();
+		message.arg1 = IPC_COMMAND_PROGRAM_TASK_FINISH;
+
+		sendCallbackMessage(message);
 	}
 
 	private void sendPlainData(final byte[] data)
@@ -2870,22 +3272,6 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void saveProgramData(final byte[] receiveData)
-	{
-		final byte[] programData = subByteArray(receiveData,PACKET_PROGRAM_DATA,(int)receiveData[PACKET_AVAILABLE_DATA_LENGTH]);
-		setDataField(mReadTableDataBuffer,mProgramTableDataIndex,programData);
-		mProgramTableDataIndex = mProgramTableDataIndex + programData.length;
-
-		if(mProgramTableDataIndex < mReadTableDataBuffer.length-1)
-		{
-			setProgramTableTimerTask(PROGRAM_TABLE_READ);
-		}
-		else
-		{
-			appendLog("Receive Data : " + formatByteArrayToHexString(mReadTableDataBuffer));
-		}
-	}
-
 	private void fillData(final byte[] outputPacket,final int offsetIndex,byte[] data)
 	{
 		setDataField(outputPacket,offsetIndex,data);
@@ -2893,7 +3279,7 @@ public class BluetoothLeIndependentService extends Service
 
 	private void fillData(final byte[] outputPacket,byte[] data)
 	{
-	 	setDataField(outputPacket,PACKET_DATA,data);
+	 	setDataField(outputPacket,FIELD_DATA,data);
 	}
 
 	private void sendPacket(final byte[] data)
@@ -2988,26 +3374,55 @@ public class BluetoothLeIndependentService extends Service
 		return desArray;
 	}
 
-	public byte[] longToBytes(long x)
+	public byte[] longToBytes(final long x,final ByteOrder order)
 	{
     	ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE / Byte.SIZE);
-		buffer.order(ByteOrder.LITTLE_ENDIAN);
+		buffer.order(order);
     	buffer.putLong(x);
     	return buffer.array();
 	}
 
+	public int byteArrayToInt(byte[] b,final ByteOrder order)
+	{
+		if(order == ByteOrder.LITTLE_ENDIAN)
+		return   b[3] & 0xFF |
+				(b[2] & 0xFF) << 8 |
+				(b[1] & 0xFF) << 16 |
+				(b[0] & 0xFF) << 24;
+		else
+			return   b[0] & 0xFF |
+					(b[1] & 0xFF) << 8 |
+					(b[2] & 0xFF) << 16 |
+					(b[3] & 0xFF) << 24;
+	}
+
+	public byte[] intToByteArray(int a)
+	{
+		return new byte[] {
+				(byte) ((a >> 24) & 0xFF),
+				(byte) ((a >> 16) & 0xFF),
+				(byte) ((a >> 8) & 0xFF),
+				(byte) (a & 0xFF)
+		};
+	}
+
     private long byteArrayToLong(final byte[] array)
     {
-        ByteBuffer buffer = ByteBuffer.wrap(array);
+		return byteArrayToLong(array,ByteOrder.LITTLE_ENDIAN);
+    }
+
+	private long byteArrayToLong(final byte[] array,final ByteOrder order)
+	{
+		ByteBuffer buffer = ByteBuffer.wrap(array);
 //		buffer.order(ByteOrder.BIG_ENDIAN);
 //		System.out.println(buffer.getLong());
 //		buffer = ByteBuffer.wrap(array);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
+		buffer.order(order);
 
-        final long value = buffer.getLong();
-        System.out.println(value);
-        return value;
-    }
+		final long value = buffer.getLong();
+		System.out.println(value);
+		return value;
+	}
 
     private String byteArrayToString(final byte[] array)
     {
@@ -3178,6 +3593,8 @@ public class BluetoothLeIndependentService extends Service
 	// Connect list
 	public boolean isBluetoothDeviceConnected(final String address)
 	{
+		getConnectedDeviceFromProfile(mInputDeviceProfile);
+
 		if(mConnectedDeviceList == null || mConnectedDeviceList.size() == 0)
 			return false;
 
@@ -3205,6 +3622,18 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
+	private void getConnectedDeviceFromProfile(final BluetoothProfile profile)
+	{
+		if(profile != null)
+		{
+			mConnectedDeviceList = getConnectedDevice(profile);
+		}
+		else
+		{
+			mConnectedDeviceList = new ArrayList<>();
+		}
+	}
+
 	public void addConnectedBluetoothDevice(final BluetoothDevice bluetoothDevice)
 	{
 		if(mConnectedDeviceList == null)
@@ -3225,7 +3654,9 @@ public class BluetoothLeIndependentService extends Service
 			if(bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
 			{
 				// During bonding process, do not connect , do nothing until bonding finish
-				if(mDeviceInitState == INIT_STATE_BONDING || mDeviceInitState == INIT_STATE_BOND_TO_CONNECT || bluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
+				if((mDeviceInitState == INIT_STATE_BONDING
+						|| mDeviceInitState == INIT_STATE_BOND_TO_CONNECT)
+						&& bluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
 				{
 					LogUtil.d(TAG,"After bonding , wait for disconnect ",Thread.currentThread().getStackTrace());
 					return;
@@ -3279,8 +3710,9 @@ public class BluetoothLeIndependentService extends Service
 			}
 
 			mDeviceInitState = INIT_STATE_BOND_OK;
+			//closeBTConnection(bluetoothDevice.getAddress());
 
-			createBTConnection();
+			_connect();
 			return;
 		}
 

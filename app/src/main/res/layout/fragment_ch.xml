@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingLeft="1dp"
+        android:paddingRight="1dp">
+
+        <!--CHANNEL-->
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:paddingTop="14dp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="5dp"
+                    android:paddingBottom="10dp"
+                    android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                    <TextView android:layout_width="70dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Channel： "/>
+                    <Spinner android:id="@+id/spinner_channel" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="0dp"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_channel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:gravity="center_vertical"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="CHANNEL"
+                    android:textColor="@color/white"
+                    android:background="@color/green"/>
+        </RelativeLayout>
+
+        <!--FUNCTION-->
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:paddingTop="14dp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="5dp"
+                    android:paddingBottom="10dp"
+                    android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                    <TextView android:layout_width="70dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Function： "/>
+                    <Spinner android:id="@+id/spinner_function" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="0dp"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_function"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:gravity="center_vertical"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="FUNCTION"
+                    android:textColor="@color/white"
+                    android:background="@color/md_red_400"/>
+        </RelativeLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <!--OUTPUT-->
+            <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:paddingTop="14dp"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="5dp"
+                        android:paddingBottom="10dp"
+                        android:background="@drawable/progrom_item_border">
+                    <LinearLayout
+                            android:id="@+id/layout_t1"
+                            android:layout_width="match_parent"
+                            android:layout_height="45dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
+                                android:layout_weight="1">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="T1： "/>
+                            <EditText android:id="@+id/edit_output_t1" android:layout_width="80dp" android:layout_height="wrap_content" android:text="" android:maxLength="3" android:inputType="number" android:gravity="center_horizontal" android:nextFocusForward="@+id/edit_output_t2"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="ms" android:textSize="10sp"/>
+                        </LinearLayout>
+                        <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
+                                android:layout_weight="1">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="T2： "/>
+                            <EditText android:id="@+id/edit_output_t2" android:layout_width="80dp" android:layout_height="wrap_content" android:text="" android:maxLength="3" android:inputType="number" android:gravity="center_horizontal" android:nextFocusForward="@+id/edit_output_t3"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="ms" android:textSize="10sp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:id="@+id/layout_t3"
+                            android:layout_width="match_parent"
+                            android:layout_height="45dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
+                                android:layout_weight="1">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="T3： "/>
+                            <EditText android:id="@+id/edit_output_t3" android:layout_width="80dp" android:layout_height="wrap_content" android:text="" android:maxLength="3" android:inputType="number" android:gravity="center_horizontal" android:nextFocusForward="@+id/edit_output_t4"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="ms" android:textSize="10sp"/>
+                        </LinearLayout>
+                        <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
+                                android:layout_weight="1">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="T4： "/>
+                            <EditText android:id="@+id/edit_output_t4" android:layout_width="80dp" android:layout_height="wrap_content" android:text="" android:maxLength="3" android:inputType="number" android:gravity="center_horizontal"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="ms" android:textSize="10sp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                        android:id="@+id/txt_title_pin_code"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="5dp"
+                        android:paddingLeft="3dp"
+                        android:paddingRight="3dp"
+                        android:gravity="center_vertical"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:text="OUTPUT"
+                        android:textColor="@color/config_text_view_color"
+                        android:background="@color/dark_gray"/>
+
+            </RelativeLayout>
+
+            <!--EVENT ON-->
+            <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:paddingTop="14dp"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="5dp"
+                        android:paddingBottom="10dp"
+                        android:background="@drawable/progrom_item_border">
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="60dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Event： "/>
+                        <Spinner android:id="@+id/spinner_event_on" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 1： "/>
+                        <Spinner android:id="@+id/spinner_on_condition_1" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 2： "/>
+                        <Spinner android:id="@+id/spinner_on_condition_2" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 3： "/>
+                        <Spinner android:id="@+id/spinner_on_condition_3" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                        android:id="@+id/txt_title_event_on"
+                        android:layout_width="wrap_content"
+                        android:layout_height="25dp"
+                        android:layout_marginLeft="5dp"
+                        android:paddingLeft="3dp"
+                        android:paddingRight="3dp"
+                        android:gravity="center_vertical"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:text="EVENT ON"
+                        android:textColor="@color/config_text_view_color"
+                        android:background="@color/dark_gray"/>
+            </RelativeLayout>
+
+            <!--EVENT OFF-->
+            <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:paddingTop="14dp"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="5dp"
+                        android:paddingBottom="10dp"
+                        android:background="@drawable/progrom_item_border">
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="60dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Event： "/>
+                        <Spinner android:id="@+id/spinner_event_off" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 1： "/>
+                        <Spinner android:id="@+id/spinner_off_condition_1" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 2： "/>
+                        <Spinner android:id="@+id/spinner_off_condition_2" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <TextView android:layout_width="90dp" android:layout_height="wrap_content" android:textColor="@color/config_text_view_color" android:text="Condition 3： "/>
+                        <Spinner android:id="@+id/spinner_off_condition_3" android:layout_width="match_parent" android:layout_height="match_parent"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                        android:id="@+id/txt_title_event_off"
+                        android:layout_width="wrap_content"
+                        android:layout_height="25dp"
+                        android:layout_marginLeft="5dp"
+                        android:paddingLeft="3dp"
+                        android:paddingRight="3dp"
+                        android:gravity="center_vertical"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:text="EVENT OFF"
+                        android:textColor="@color/config_text_view_color"
+                        android:background="@color/dark_gray"/>
+            </RelativeLayout>
+
+            <!--BYPASS-->
+            <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:paddingTop="14dp"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="5dp"
+                        android:paddingBottom="10dp"
+                        android:background="@drawable/progrom_item_border">
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="45dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <CheckBox android:id="@+id/ck_pbrake" android:layout_width="150dp" android:layout_height="wrap_content" android:text="P-Brake"/>
+                        <CheckBox android:id="@+id/ck_trunk" android:layout_width="150dp" android:layout_height="wrap_content" android:text="Trunk"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="45dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                        <CheckBox android:id="@+id/ck_door" android:layout_width="150dp" android:layout_height="wrap_content" android:text="Door"/>
+                        <CheckBox android:id="@+id/ck_sensor" android:layout_width="150dp" android:layout_height="wrap_content" android:text="Sensor"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                        android:id="@+id/txt_title_siren"
+                        android:layout_width="wrap_content"
+                        android:layout_height="25dp"
+                        android:layout_marginLeft="5dp"
+                        android:paddingLeft="3dp"
+                        android:paddingRight="3dp"
+                        android:gravity="center_vertical"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:text="BYPASS"
+                        android:textColor="@color/config_text_view_color"
+                        android:background="@color/dark_gray"/>
+            </RelativeLayout>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -19,22 +19,22 @@ import static com.startline.slble.Interface.ProgramTool.*;
 
 public class AfFragment extends BaseFragment
 {
-    public static AfFragment newInstance(String title, int indicatorColor, int dividerColor)
+    public static AfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor)
     {
-        return newInstance(title,indicatorColor,dividerColor,0,null);
+        return newInstance(index,title,indicatorColor,dividerColor,0,null);
     }
 
-    public static AfFragment newInstance(String title, int indicatorColor, int dividerColor,final OnProgramDataChangedListener onProgramDataChangedListener)
+    public static AfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor,final OnProgramDataChangedListener onProgramDataChangedListener)
     {
-        return newInstance(title,indicatorColor,dividerColor,0,onProgramDataChangedListener);
+        return newInstance(index,title,indicatorColor,dividerColor,0,onProgramDataChangedListener);
     }
 
-    public static AfFragment newInstance(String title, int indicatorColor, int dividerColor, int iconResId)
+    public static AfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor, int iconResId)
     {
-        return newInstance(title,indicatorColor,dividerColor,iconResId,null);
+        return newInstance(index,title,indicatorColor,dividerColor,iconResId,null);
     }
 
-    public static AfFragment newInstance(String title, int indicatorColor, int dividerColor, int iconResId, final OnProgramDataChangedListener onProgramDataChangedListener)
+    public static AfFragment newInstance(final int index,String title, int indicatorColor, int dividerColor, int iconResId, final OnProgramDataChangedListener onProgramDataChangedListener)
     {
         AfFragment f = new AfFragment();
         f.setTitle(title);
@@ -42,12 +42,11 @@ public class AfFragment extends BaseFragment
         f.setDividerColor(dividerColor);
         f.setIconResId(iconResId);
         f.setOnProgramDataChangedListener(onProgramDataChangedListener);
-
+        f.setPageIndex(index);
 
         //pass data
         Bundle args = new Bundle();
         f.setArguments(args);
-
         return f;
     }
 
@@ -98,18 +97,21 @@ public class AfFragment extends BaseFragment
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
-        final View rootView = inflater.inflate(R.layout.fragment_program_table_af_sf, container, false);
-        listView = (ListView)rootView.findViewById(R.id.list_view);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
+        if(mRootView == null)
         {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+            mRootView = inflater.inflate(R.layout.fragment_program_table_af_sf, container, false);
+            listView = (ListView)mRootView.findViewById(R.id.list_view);
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
             {
-                handleOnItemClick(parent,view,position,id);
-            }
-        });
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+                {
+                    handleOnItemClick(parent,view,position,id);
+                }
+            });
+        }
 
-        return rootView;
+        return mRootView;
     }
 
     @Override
@@ -204,11 +206,11 @@ public class AfFragment extends BaseFragment
             {
                 if(mModifiedData[AF_ITEM_CAR_ALARM_MODE] == 0)
                 {
-                    itemArray = new String[]{"Off", "On(Valet button"};
+                    itemArray = new String[]{"Off", "On(Valet button)"};
                 }
                 else
                 {
-                    itemArray = new String[]{"Off", "On(Remove TAG", "On(SEvent)", "On(CAN PIN CODE)"};
+                    itemArray = new String[]{"Off", "On(Remove TAG)", "On(SEvent)", "On(CAN PIN CODE)"};
                 }
             }
             break;
@@ -298,7 +300,34 @@ public class AfFragment extends BaseFragment
             itemArray = getItemArray(i);
             map = new HashMap<String, Object>();
             map.put("index",i+1);
-            map.put("title", getDisplayString(mTitleArray[i]));
+
+            if(i==9)
+            {
+                if(mModifiedData[AF_ITEM_CAR_ALARM_MODE] == 0)
+                {
+                    map.put("title", getDisplayString(mTitleArray[i]));
+                }
+                else
+                {
+                    map.put("title", getDisplayString(R.string.title_item_2_step_disarm_slave));
+                }
+            }
+            else if(i == 14)
+            {
+                if(mModifiedData[AF_ITEM_CAR_ALARM_MODE] == 0)
+                {
+                    map.put("title", getDisplayString(mTitleArray[i]));
+                }
+                else
+                {
+                    map.put("title", getDisplayString(R.string.title_item_event_1_input_slave));
+                }
+            }
+            else
+            {
+                map.put("title", getDisplayString(mTitleArray[i]));
+            }
+
 
 
             int value = (int)mModifiedData[i];
@@ -317,5 +346,11 @@ public class AfFragment extends BaseFragment
             mDataList.add(map);
         }
         return mDataList;
+    }
+
+    @Override
+    public void refresh()
+    {
+        updateListAdapter(true);
     }
 }

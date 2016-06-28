@@ -20,6 +20,14 @@ public class TabFragment extends Fragment
     private SlidingTabLayout tabs;
     private ViewPager pager;
     private FragmentPagerAdapter adapter;
+    private OnProgramDataChangedListener onProgramDataChangedListener;
+
+    public void setOnPageChangeListener(ViewPager.OnPageChangeListener onPageChangeListener)
+    {
+        this.onPageChangeListener = onPageChangeListener;
+    }
+
+    private ViewPager.OnPageChangeListener onPageChangeListener;
 
     public OnProgramDataChangedListener getOnProgramDataChangedListener()
     {
@@ -31,7 +39,7 @@ public class TabFragment extends Fragment
         this.onProgramDataChangedListener = onProgramDataChangedListener;
     }
 
-    private OnProgramDataChangedListener onProgramDataChangedListener;
+
 
     public static Fragment newInstance()
     {
@@ -55,6 +63,7 @@ public class TabFragment extends Fragment
         //pager
         pager = (ViewPager) view.findViewById(R.id.pager);
         pager.setAdapter(adapter);
+        //pager.addOnPageChangeListener(onPageChangeListener);
 
         //tabs
         tabs = (SlidingTabLayout) view.findViewById(R.id.tabs);
@@ -77,7 +86,7 @@ public class TabFragment extends Fragment
         tabs.setBackgroundResource(R.color.md_blue_500);
         tabs.setCustomTabView(R.layout.table_title, R.id.txtTabTitle);
         tabs.setViewPager(pager);
-
+        tabs.setOnPageChangeListener(onPageChangeListener);
     }
 
     private LinkedList<BaseFragment> getFragments()
@@ -87,9 +96,23 @@ public class TabFragment extends Fragment
         int dividerColor = Color.TRANSPARENT;
 
         LinkedList<BaseFragment> fragments = new LinkedList<BaseFragment>();
-        fragments.add(AfFragment.newInstance("AF", indicatorColor, dividerColor,onProgramDataChangedListener));
-        fragments.add(SfFragment.newInstance("SF", indicatorColor, dividerColor,onProgramDataChangedListener));
+        fragments.add(AfFragment.newInstance(0,"AF", indicatorColor, dividerColor,onProgramDataChangedListener));
+        fragments.add(SfFragment.newInstance(1,"SF", indicatorColor, dividerColor,onProgramDataChangedListener));
+        fragments.add(LntFragment.newInstance(2,"LNT", indicatorColor, dividerColor,onProgramDataChangedListener));
+        fragments.add(ChFragment.newInstance(3,"CH", indicatorColor, dividerColor,onProgramDataChangedListener));
         return fragments;
+    }
+
+    public void setCurrentIndex(final int index)
+    {
+        if(pager == null)
+        {
+            return ;
+        }
+
+        pager.setCurrentItem(index,false);
+        tabs.setViewPager(pager);
+        adapter.notifyDataSetChanged();
     }
 
     public int getCurrentIndex()

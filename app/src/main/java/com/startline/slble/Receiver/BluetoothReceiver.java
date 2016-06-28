@@ -34,7 +34,7 @@ public class BluetoothReceiver extends BroadcastReceiver
     @Override
     public void onReceive(final Context context, final Intent intent)
     {
-        //LogUtil.d("BluetoothReceiver",intent.getAction(), Thread.currentThread().getStackTrace());
+        LogUtil.d("BluetoothReceiver",intent.getAction(), Thread.currentThread().getStackTrace());
 
         // If not support BLE, do nothing
         if(!isSupportBLE(context))

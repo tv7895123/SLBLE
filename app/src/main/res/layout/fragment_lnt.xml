@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp"
+                android:paddingTop="14dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="45dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/white" android:text="PinCode(4 digits)： "/>
+                    <EditText android:id="@+id/edit_pin_code" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="" android:maxLength="4" android:inputType="number"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_pin_code"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="PIN CODE"
+                    android:textColor="@color/white"
+                    android:background="@color/dark_gray"/>
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp"
+                android:paddingTop="14dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView android:layout_width="100dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Level： "/>
+                    <Spinner android:id="@+id/spinner_tilt" android:layout_width="70dp" android:layout_height="match_parent"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_tilt_sensor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="TILT SENSOR"
+                    android:textColor="@color/white"
+                    android:background="@color/dark_gray"/>
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp"
+                android:paddingTop="14dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView android:layout_width="100dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Level (Heavy)： "/>
+                    <Spinner android:id="@+id/spinner_heavy_shock" android:layout_width="70dp" android:layout_height="match_parent"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView android:layout_width="100dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Level (Light)： "/>
+                    <Spinner android:id="@+id/spinner_light_shock" android:layout_width="70dp" android:layout_height="match_parent"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_shock_sensor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="SHOCK SENSOR"
+                    android:textColor="@color/white"
+                    android:background="@color/dark_gray"/>
+        </RelativeLayout>
+
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp"
+                android:paddingTop="14dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:background="@drawable/progrom_item_border">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView android:layout_width="100dp" android:layout_height="wrap_content" android:textColor="@color/white" android:text="Volume： "/>
+                    <Spinner android:id="@+id/spinner_siren" android:layout_width="70dp" android:layout_height="match_parent"/>
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/txt_title_siren"
+                    android:layout_width="wrap_content"
+                    android:layout_height="25dp"
+                    android:layout_marginLeft="5dp"
+                    android:paddingLeft="3dp"
+                    android:paddingRight="3dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:text="SIREN"
+                    android:textColor="@color/white"
+                    android:background="@color/dark_gray"/>
+        </RelativeLayout>
+    </LinearLayout>
+</ScrollView>
