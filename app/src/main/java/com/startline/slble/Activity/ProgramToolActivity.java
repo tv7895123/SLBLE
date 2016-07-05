@@ -124,17 +124,34 @@ public class ProgramToolActivity extends AppCompatActivity
                         if(programData.dataCount == programData.dataLength)
                         {
                             //syncAllData();
-                            Toast.makeText(context,"Open program mode success",Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context,"Enter program mode success",Toast.LENGTH_SHORT).show();
+                            setSyncButtonEnable(true);
                         }
                         else
                         {
-                            Toast.makeText(context,"Open program mode failed",Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context,"Enter program mode failed",Toast.LENGTH_SHORT).show();
                         }
                     }
                     // Exit Program mode
                     else
                     {
-
+                        if(programData.dataCount == programData.dataLength)
+                        {
+                            setSyncButtonEnable(false);
+                            setSaveButtonEnable(false);
+                            if(programData.dataCount == 0)
+                            {
+                                Toast.makeText(context,"Exit program mode",Toast.LENGTH_SHORT).show();
+                            }
+                            else
+                            {
+                                Toast.makeText(context,"Exit program mode success",Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        else
+                        {
+                            Toast.makeText(context,"Exit program mode failed",Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
                 else if(taskObject.taskCommand == CMD_PROGRAM_DATA)
@@ -201,7 +218,8 @@ public class ProgramToolActivity extends AppCompatActivity
         if(mMenu == null)
         {
             mMenu = menu;
-            showSaveButton(false);
+            setSaveButtonEnable(false);
+            setSyncButtonEnable(false);
         }
 
         return super.onCreateOptionsMenu(menu);
@@ -243,9 +261,18 @@ public class ProgramToolActivity extends AppCompatActivity
     protected void onResume()
     {
         super.onResume();
+
         if(getService() != null)
         {
             getService().setIpcCallbackhandler(mHandler);
+            if(getService().isInProgramMode())
+            {
+                setSyncButtonEnable(true);
+            }
+            else
+            {
+                setSyncButtonEnable(false);
+            }
         }
     }
 
@@ -281,21 +308,21 @@ public class ProgramToolActivity extends AppCompatActivity
             @Override
             public void run()
             {
-                saveInitData(0,new byte[32]);
-                saveModifiedData(0,new byte[32]);
-                updateFragmentProgramData(0,new byte[32]);
+                saveInitData(PROGRAM_DATA_TYPE_AF,new byte[32]);
+                saveModifiedData(PROGRAM_DATA_TYPE_AF,new byte[32]);
+                updateFragmentProgramData(PROGRAM_DATA_TYPE_AF,new byte[32]);
 
-                saveInitData(1,new byte[32]);
-                saveModifiedData(1,new byte[32]);
-                updateFragmentProgramData(1,new byte[32]);
+                saveInitData(PROGRAM_DATA_TYPE_SF,new byte[32]);
+                saveModifiedData(PROGRAM_DATA_TYPE_SF,new byte[32]);
+                updateFragmentProgramData(PROGRAM_DATA_TYPE_SF,new byte[32]);
 
-                saveInitData(2,new byte[16]);
-                saveModifiedData(2,new byte[16]);
-                updateFragmentProgramData(2,new byte[16]);
+                saveInitData(PROGRAM_DATA_TYPE_LNT,new byte[16]);
+                saveModifiedData(PROGRAM_DATA_TYPE_LNT,new byte[16]);
+                updateFragmentProgramData(PROGRAM_DATA_TYPE_LNT,new byte[16]);
 
-                saveInitData(3,new byte[16]);
-                saveModifiedData(3,new byte[16]);
-                updateFragmentProgramData(3,new byte[16]);
+                saveInitData(PROGRAM_DATA_TYPE_CH,new byte[16]);
+                saveModifiedData(PROGRAM_DATA_TYPE_CH,new byte[16]);
+                updateFragmentProgramData(PROGRAM_DATA_TYPE_CH,new byte[16]);
 
                 //intoProgramMode();
             }
@@ -437,10 +464,24 @@ public class ProgramToolActivity extends AppCompatActivity
         }
     }
 
-    private void showSaveButton(final boolean visible)
+    private void setSaveButtonEnable(final boolean visible)
     {
-        mMenu.findItem(R.id.action_save).setEnabled(visible);
-        //invalidateOptionsMenu();
+        if(mMenu== null) return;
+        final MenuItem save =  mMenu.findItem(R.id.action_save);
+        if(save != null)
+        {
+            save.setEnabled(visible);
+        }
+    }
+
+    private void setSyncButtonEnable(final boolean visible)
+    {
+        if(mMenu== null) return;
+        final MenuItem sync =  mMenu.findItem(R.id.action_sync);
+        if(sync != null)
+        {
+            sync.setEnabled(visible);
+        }
     }
 
     private void saveInitData(final int index,final byte[] data)
@@ -566,11 +607,11 @@ public class ProgramToolActivity extends AppCompatActivity
         if(isDataChanged(getInitData(index),data))
         {
             saveModifiedData(index,data);
-            showSaveButton(true);
+            setSaveButtonEnable(true);
         }
         else
         {
-            showSaveButton(false);
+            setSaveButtonEnable(false);
         }
     }
 

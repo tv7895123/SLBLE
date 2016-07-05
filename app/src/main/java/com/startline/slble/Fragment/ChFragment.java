@@ -231,6 +231,18 @@ public class ChFragment extends BaseFragment
                         mModifiedData[CH_ITEM_EVENT_ON] = value;
                         dataChanged = true;
                     }
+
+                    if(position == 0)
+                    {
+
+                    }
+                    else
+                    {
+                        final String[] conditions_on = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_ON]);
+                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_1 & 0x0F]]));
+                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2 & 0x0F]]));
+                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3 & 0x0F]]));
+                    }
                 }
                 break;
                 case R.id.spinner_on_condition_1:
@@ -280,6 +292,18 @@ public class ChFragment extends BaseFragment
                     {
                         mModifiedData[CH_ITEM_EVENT_OFF] = value;
                         dataChanged = true;
+                    }
+
+                    if(position == 0)
+                    {
+
+                    }
+                    else
+                    {
+                        final String[] conditions_off = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_OFF]);
+                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1 & 0xF0]) >> 4]));
+                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2 & 0xF0]) >> 4]));
+                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3 & 0xF0]) >> 4]));
                     }
                 }
                 break;
@@ -534,22 +558,8 @@ public class ChFragment extends BaseFragment
         editT4.setText(String.valueOf(mModifiedData[CH_ITEM_T4+1]*256 + mModifiedData[CH_ITEM_T4]));
 
         spinnerEventOn.setSelection(mModifiedData[CH_ITEM_EVENT_ON]);
-        final String[] conditions_on = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_ON]);
-        int index = mModifiedData[CH_ITEM_CONDITION_1 & 0x0F];
-        if(index < 0)
-            index = 0;
-        if(index >= FULL_CONDITION.length)
-            index = FULL_CONDITION.length-1;
-        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[index]));
-        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2 & 0x0F]]));
-        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3 & 0x0F]]));
-
 
         spinnerEventOff.setSelection(mModifiedData[CH_ITEM_EVENT_OFF]);
-        final String[] conditions_off = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_OFF]);
-        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1 & 0xF0]) >> 4]));
-        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2 & 0xF0]) >> 4]));
-        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3 & 0xF0]) >> 4]));
 
         checkPBrake.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x08) > 0);
         checkTrunk.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x04) > 0);
@@ -566,6 +576,8 @@ public class ChFragment extends BaseFragment
     {
         switch (event)
         {
+            case 0:
+                return new String[]{};
             case 2:
             case 3:
             case 4:

@@ -7,7 +7,7 @@ public interface  ProgramTool
 {
     public static final int AF_DATA_LENGTH = 32;
     public static final int SF_DATA_LENGTH = 32;
-    public static final int LNT_DATA_LENGTH = 32;
+    public static final int LNT_DATA_LENGTH = 16;
     public static final int CH_DATA_LENGTH = 16;
 
     public static final int PROGRAM_ADDRESS_START =0x0;

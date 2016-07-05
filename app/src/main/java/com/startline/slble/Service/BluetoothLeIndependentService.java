@@ -236,7 +236,7 @@ public class BluetoothLeIndependentService extends Service
 
 	// ProgramTable
 	private long mPrbsKey;
-	private byte mPrbsJump;
+	private int mPrbsJump;
 	private int mProgramModeState = OFF;
 	private int mQueueStartIndex = 0;
 	private int mQueueEndIndex = 0;
@@ -2480,6 +2480,13 @@ public class BluetoothLeIndependentService extends Service
 				break;
 				case CMD_CAR_STATUS:
 				{
+					if(isInProgramMode())
+					{
+						clearTaskQueue();
+
+						addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,0,null));
+					}
+
 					handleReceiveCsta(receiveData,false);
 
                     initDeviceState(INIT_STATE_END); // Receive CSTA
@@ -2540,7 +2547,7 @@ public class BluetoothLeIndependentService extends Service
 						longBytes[2] = receiveData[5];
 						longBytes[3] = receiveData[6];
 						mPrbsKey = byteArrayToLong(longBytes,ByteOrder.LITTLE_ENDIAN);
-						mPrbsJump = receiveData[7];
+						mPrbsJump = receiveData[7] & 0xFF;
 
 						appendLog("PRBS Key : " + NEW_LINE_CHARACTER + formatByteArrayToLog(longToBytes(mPrbsKey,ByteOrder.BIG_ENDIAN)));
 						appendLog("PRBS Jump : " + String.format("%02X",mPrbsJump));
@@ -2558,9 +2565,7 @@ public class BluetoothLeIndependentService extends Service
 					}
 					else if(receiveData[FIELD_PARAMETER] == PARAM_BLE_LEAVE_PROGRAM_INTERFACE)
 					{
-						mProgramModeState = OFF;
-						mPrbsKey = 0;
-						mPrbsJump = 0;
+						// APP ask to leave programming mode
 						if(mCurrentTask != null && mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE && mCurrentTask.taskParameter == PARAM_ASK_LEAVE_PROGRAM_INTERFACE)
 						{
 							final ProgramData programData = (ProgramData)(mCurrentTask.taskData);
@@ -2570,6 +2575,20 @@ public class BluetoothLeIndependentService extends Service
 							}
 							mCurrentTask.state = TaskObject.STATE_IDLE;
 						}
+						// CarAlarm leave programming mode active
+						else
+						{
+							if(isInProgramMode())
+							{
+								clearTaskQueue();
+
+								addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,0,null));
+							}
+						}
+
+						mProgramModeState = OFF;
+						mPrbsKey = 0;
+						mPrbsJump = 0;
 					}
 				}
 				break;
@@ -2592,11 +2611,11 @@ public class BluetoothLeIndependentService extends Service
 						return;
 					}
 
-					// Check address
-					if(programData.subAddressHigh == receiveData[FIELD_PROGRAM_ADDRESS_HIGH_BYTE] && programData.subAddressLow == receiveData[FIELD_PROGRAM_ADDRESS_LOW_BYTE])
+					// Reply READ data
+					if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_DEAD_DATA)
 					{
-						// Reply READ data
-						if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_DEAD_DATA)
+						// Check address
+						if(programData.subAddressHigh == receiveData[FIELD_PROGRAM_ADDRESS_HIGH_BYTE] && programData.subAddressLow == receiveData[FIELD_PROGRAM_ADDRESS_LOW_BYTE])
 						{
 							final byte[] data = subByteArray(receiveData,FIELD_PROGRAM_DATA,receiveData[FIELD_PROGRAM_DATA_LENGTH]);
 							appendLog("Decode data : " + NEW_LINE_CHARACTER + formatByteArrayToLog(data));
@@ -2606,11 +2625,15 @@ public class BluetoothLeIndependentService extends Service
 							mCurrentTask.state = TaskObject.STATE_IDLE;
 							programData.dataCount = programData.dataCount + data.length;
 						}
-						// Reply WRITE data
-						else if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_WRITE_DATA)
+					}
+					// Reply WRITE data
+					else if(receiveData[FIELD_PARAMETER] == PARAM_TX_REPLY_WRITE_DATA)
+					{
+						mCurrentTask.state = TaskObject.STATE_IDLE;
+						programData.dataCount = programData.dataCount + PACKET_PROGRAM_DATA_LENGTH;
+						if(programData.dataCount > programData.dataLength)
 						{
-							mCurrentTask.state = TaskObject.STATE_IDLE;
-							programData.dataCount = programData.dataCount + receiveData[FIELD_PROGRAM_DATA_LENGTH];
+							programData.dataCount = programData.dataLength;
 						}
 					}
 				}
@@ -2919,14 +2942,14 @@ public class BluetoothLeIndependentService extends Service
 										{
 											final String s = formatByteArrayToLog(programData.dataBuffer);
 											LogUtil.d(TAG,"Read finish : " + s,Thread.currentThread().getStackTrace());
-											appendLog(String.format("Read 0x%02d 0x%02d",programData.addressHigh,programData.addressLow) + NEW_LINE_CHARACTER + s);
+											appendLog(String.format("Read 0x%02X 0x%02X",programData.addressHigh & 0xFF,programData.addressLow & 0xFF) + NEW_LINE_CHARACTER + s);
 										}
 										// Write
 										else if(mCurrentTask.taskParameter == PARAM_WRITE_PROGRAM_DATA)
 										{
 											final String s = formatByteArrayToLog(programData.dataBuffer);
 											LogUtil.d(TAG,"Write finish: " + s,Thread.currentThread().getStackTrace());
-											appendLog(String.format("Write 0x%02d 0x%02d",programData.addressHigh,programData.addressLow) + NEW_LINE_CHARACTER + s);
+											appendLog(String.format("Write 0x%02X 0x%02X",programData.addressHigh & 0xFF,programData.addressLow & 0xFF) + NEW_LINE_CHARACTER + s);
 										}
 									}
 
@@ -2960,16 +2983,6 @@ public class BluetoothLeIndependentService extends Service
 										if(mCurrentTask.taskParameter == PARAM_READ_PROGRAM_DATA)
 										{
 											sendProgramTablePacket(PARAM_READ_PROGRAM_DATA,add[0],add[1],length,null);
-
-	//										mHandler.postDelayed(new Runnable()
-	//										{
-	//											@Override
-	//											public void run()
-	//											{
-	//												final byte[] temp = new byte[]{0x01,CMD_PROGRAM_DATA,PARAM_TX_REPLY_DEAD_DATA,mCurrentTask.subAddressHigh,mCurrentTask.subAddressLow,(byte)length,1,0,1,1,1,1,1,1,1,1,0,0,0,(byte)0x22};
-	//												handleInActiveCommandFunction(temp);
-	//											}
-	//										},100);
 										}
 										// Write
 										else if(mCurrentTask.taskParameter == PARAM_WRITE_PROGRAM_DATA)
@@ -2977,16 +2990,6 @@ public class BluetoothLeIndependentService extends Service
 											final byte[] data = subByteArray(programData.dataBuffer,programData.dataCount,length);
 											prbsEncodeDecode(data,data.length);
 											sendProgramTablePacket(PARAM_WRITE_PROGRAM_DATA,add[0],add[1],length,data);
-
-	//										mHandler.postDelayed(new Runnable()
-	//										{
-	//											@Override
-	//											public void run()
-	//											{
-	//												final byte[] temp = new byte[]{0x01,CMD_PROGRAM_DATA,PARAM_TX_REPLY_WRITE_DATA,mCurrentTask.subAddressHigh,mCurrentTask.subAddressLow,(byte)length,1,2,3,4,5,6,7,8,9,10,11,12,13,(byte)0xD9};
-	//												handleInActiveCommandFunction(temp);
-	//											}
-	//										},100);
 										}
 									}
 
@@ -3021,10 +3024,13 @@ public class BluetoothLeIndependentService extends Service
 	{
 		long localKey = mPrbsKey;
 
-		LogUtil.d(TAG,"Init PRBS KEY = " + formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN)), Thread.currentThread().getStackTrace());
+		appendLog("Init PRBS KEY = " + formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN)) + ",Jump = " + mPrbsJump + "Length = " + dataLength);
+		LogUtil.d(TAG,"Init PRBS KEY = " + formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN)) + ",Jump = " + mPrbsJump + "Length = " + dataLength, Thread.currentThread().getStackTrace());
 		for(int i=0;i<dataLength;i++)
 		{
 			data[i] = (byte)(data[i] ^ (localKey & 0xFF));
+			//appendLog(String.format("Data[%02d]  = %02X",i,data[i]));
+			//LogUtil.d(TAG,String.format("Data[%02d]  = %02X",i,data[i]), Thread.currentThread().getStackTrace());
 
 			// change the key according to the specified jump amount
 			for(int j=0;j<mPrbsJump;j++)
@@ -3033,7 +3039,7 @@ public class BluetoothLeIndependentService extends Service
 				if((localKey & 0x00000001) > 0)
 				{
 					//calculate new key
-					localKey = ((localKey>>1)^(PRBS_FEEDBACK_TABLE[0]))& 0x00000000FFFFFFFFL;
+					localKey = ((localKey>>1)^(PRBS_FEEDBACK_TABLE[0]));
 				}
 				//otherwise just shift the key
 				else
@@ -3041,10 +3047,10 @@ public class BluetoothLeIndependentService extends Service
 					localKey = localKey>>1;
 				}
 
-				//LogUtil.d(TAG,String.format("PRBS KEY[%d][%d] = %s",i,j, formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN))), Thread.currentThread().getStackTrace());
+				localKey = localKey & 0x00000000FFFFFFFFL;
+				//appendLog(String.format("[%02d] Local KEY = ",j) + formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN)));
+				//LogUtil.d(TAG,String.format("Local KEY[%d][%d] = %s",i,j, formatByteArrayToLog(longToBytes(localKey,ByteOrder.BIG_ENDIAN))), Thread.currentThread().getStackTrace());
 			}
-
-
 		}
 	}
 
