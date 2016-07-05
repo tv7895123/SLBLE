@@ -17,6 +17,9 @@
     <drawable name = "gray_blue">#2F3F4F</drawable>
     <drawable name = "gray_light_blue">#6F7F8F</drawable>
 
+    <color name = "active_green">#44FF44</color>
+    <color name = "disable_green">#115511</color>
+
     <!--GROUP_TITLE_BG-->
     <color name="group_background_color">#5F5F5F</color>
 

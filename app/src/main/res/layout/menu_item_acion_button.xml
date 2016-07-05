@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/txt_mobile_number_value"
+    android:id="@+id/txt_custom_action_save"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginLeft="3dp"
-    android:layout_marginRight="3dp"
+    android:paddingLeft="3dp"
+    android:paddingRight="3dp"
     android:gravity="center_horizontal"
-    android:textColor="@color/green"
+    android:textColor="@color/action_text_view_color"
     android:textAppearance="?android:attr/textAppearanceSmall"
-    android:textSize="16sp"
-    android:text="SAVE"/>
+    android:textSize="17sp"
+    android:text="SAVE"
+    android:enabled="false"/>

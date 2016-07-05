@@ -20,6 +20,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -51,6 +52,7 @@ public class ProgramToolActivity extends AppCompatActivity
     private TabFragment mTabFragment = null;
     private FragmentManager mFragmentManager = null;
     private BluetoothLeIndependentService mService = null;
+    private TextView txtCustomActionSave;
     private byte[] mInitAfData = null;
     private byte[] mInitSfData = null;
     private byte[] mInitLntData = null;
@@ -235,12 +237,25 @@ public class ProgramToolActivity extends AppCompatActivity
             mMenu = menu;
             setSaveButtonEnable(false);
             setSyncButtonEnable(false);
+
+            final MenuItem itemSave = menu.findItem(R.id.action_save);
+            itemSave.setActionView(R.layout.menu_item_acion_button);
+            final View actionSave = itemSave.getActionView().findViewById(R.id.txt_custom_action_save);
+            txtCustomActionSave = (TextView) actionSave.findViewById(R.id.txt_custom_action_save);
+            actionSave.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    saveSetting();
+                }
+            });
         }
 
-        final MenuItem itemSave = menu.findItem(R.id.action_save);
-        final SpannableString spannableString = new SpannableString("SAVE");
-        spannableString.setSpan(new ForegroundColorSpan(Color.GREEN), 0, spannableString.length(), 0);
-        itemSave.setTitle(spannableString);
+//        final MenuItem itemSave = menu.findItem(R.id.action_save);
+//        final SpannableString spannableString = new SpannableString("SAVE");
+//        spannableString.setSpan(new ForegroundColorSpan(Color.GREEN), 0, spannableString.length(), 0);
+//        itemSave.setTitle(spannableString);
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -520,23 +535,28 @@ public class ProgramToolActivity extends AppCompatActivity
         }
     }
 
-    private void setSaveButtonEnable(final boolean visible)
+    private void setSaveButtonEnable(final boolean enable)
     {
         if(mMenu== null) return;
         final MenuItem save =  mMenu.findItem(R.id.action_save);
         if(save != null)
         {
-            save.setEnabled(visible);
+            save.setEnabled(enable);
+        }
+
+        if(txtCustomActionSave != null)
+        {
+            txtCustomActionSave.setEnabled(enable);
         }
     }
 
-    private void setSyncButtonEnable(final boolean visible)
+    private void setSyncButtonEnable(final boolean enable)
     {
         if(mMenu== null) return;
         final MenuItem sync =  mMenu.findItem(R.id.action_sync);
         if(sync != null)
         {
-            sync.setEnabled(visible);
+            sync.setEnabled(enable);
         }
     }
 
