@@ -2,24 +2,29 @@ package com.startline.slble.Fragment;
 
 import java.util.LinkedList;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import com.startline.slble.Adapter.TabFragmentPagerAdapter;
 import com.startline.slble.Interface.OnProgramDataChangedListener;
+import com.startline.slble.Pager.CustomViewPager;
 import com.startline.slble.R;
 import com.startline.slble.view.SlidingTabLayout;
 
 public class TabFragment extends Fragment
 {
     private SlidingTabLayout tabs;
-    private ViewPager pager;
+    private CustomViewPager pager;
     private FragmentPagerAdapter adapter;
+    private View viewMask;
     private OnProgramDataChangedListener onProgramDataChangedListener;
 
     public void setOnPageChangeListener(ViewPager.OnPageChangeListener onPageChangeListener)
@@ -38,7 +43,6 @@ public class TabFragment extends Fragment
     {
         this.onProgramDataChangedListener = onProgramDataChangedListener;
     }
-
 
 
     public static Fragment newInstance()
@@ -61,7 +65,7 @@ public class TabFragment extends Fragment
         adapter = new TabFragmentPagerAdapter(getFragmentManager(), fragments);
 
         //pager
-        pager = (ViewPager) view.findViewById(R.id.pager);
+        pager = (CustomViewPager) view.findViewById(R.id.pager);
         pager.setAdapter(adapter);
         //pager.addOnPageChangeListener(onPageChangeListener);
 
@@ -87,6 +91,14 @@ public class TabFragment extends Fragment
         tabs.setCustomTabView(R.layout.table_title, R.id.txtTabTitle);
         tabs.setViewPager(pager);
         tabs.setOnPageChangeListener(onPageChangeListener);
+
+        viewMask = view.findViewById(R.id.view_mask);
+        viewMask.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
     }
 
     private LinkedList<BaseFragment> getFragments()
@@ -128,6 +140,21 @@ public class TabFragment extends Fragment
     public FragmentPagerAdapter getTabFragmentAdapter()
     {
         return adapter;
+    }
+
+    public SlidingTabLayout getTab()
+    {
+        return tabs;
+    }
+
+    public CustomViewPager getPager()
+    {
+        return pager;
+    }
+
+    public void setMaskVisible(final boolean visible)
+    {
+        viewMask.setVisibility(visible?View.VISIBLE:View.GONE);
     }
 
 }

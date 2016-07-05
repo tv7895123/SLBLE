@@ -6,6 +6,7 @@ package com.startline.slble.Activity;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -13,10 +14,14 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.startline.slble.Fragment.BaseFragment;
 import com.startline.slble.Fragment.ChFragment;
@@ -56,6 +61,8 @@ public class ProgramToolActivity extends AppCompatActivity
     private byte[] mModifiedLntData = null;
     private byte[] mModifiedChData = null;
     private byte[] mWriteData = null;
+
+    private boolean mFinish = false;
 
     private ProgressDialog mProgressDialog = null;
     private OnProgramDataChangedListener onProgramDataChangedListener = new OnProgramDataChangedListener()
@@ -124,8 +131,9 @@ public class ProgramToolActivity extends AppCompatActivity
                         if(programData.dataCount == programData.dataLength)
                         {
                             //syncAllData();
+                            refreshUI(true);
+                            syncSetting();
                             Toast.makeText(context,"Enter program mode success",Toast.LENGTH_SHORT).show();
-                            setSyncButtonEnable(true);
                         }
                         else
                         {
@@ -137,8 +145,7 @@ public class ProgramToolActivity extends AppCompatActivity
                     {
                         if(programData.dataCount == programData.dataLength)
                         {
-                            setSyncButtonEnable(false);
-                            setSaveButtonEnable(false);
+                            refreshUI(false);
                             if(programData.dataCount == 0)
                             {
                                 Toast.makeText(context,"Exit program mode",Toast.LENGTH_SHORT).show();
@@ -146,6 +153,16 @@ public class ProgramToolActivity extends AppCompatActivity
                             else
                             {
                                 Toast.makeText(context,"Exit program mode success",Toast.LENGTH_SHORT).show();
+                            }
+
+                            if(mFinish)
+                            {
+                                mHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        finish();
+                                    }
+                                },500);
                             }
                         }
                         else
@@ -195,9 +212,7 @@ public class ProgramToolActivity extends AppCompatActivity
                             // Verify
                             if(mWriteData != null)
                             {
-                                mProgressDialog.setMessage("Verify...Please wait.");
-                                mProgressDialog.show();
-                                syncSetting();
+                                syncSetting(1);
                             }
                         }
                         else
@@ -221,6 +236,11 @@ public class ProgramToolActivity extends AppCompatActivity
             setSaveButtonEnable(false);
             setSyncButtonEnable(false);
         }
+
+        final MenuItem itemSave = menu.findItem(R.id.action_save);
+        final SpannableString spannableString = new SpannableString("SAVE");
+        spannableString.setSpan(new ForegroundColorSpan(Color.GREEN), 0, spannableString.length(), 0);
+        itemSave.setTitle(spannableString);
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -248,7 +268,7 @@ public class ProgramToolActivity extends AppCompatActivity
             return true;
             case R.id.action_exit:
             {
-                exitProgramMode();
+                exitProgramMode(true);
             }
             return true;
 
@@ -267,13 +287,29 @@ public class ProgramToolActivity extends AppCompatActivity
             getService().setIpcCallbackhandler(mHandler);
             if(getService().isInProgramMode())
             {
-                setSyncButtonEnable(true);
+                refreshUI(true);
             }
             else
             {
-                setSyncButtonEnable(false);
+                refreshUI(false);
             }
         }
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        mFinish = true;
+        if(getService() != null)
+        {
+            if(getService().isInProgramMode())
+            {
+                exitProgramMode(true);
+                return;
+            }
+        }
+
+        super.onBackPressed();
     }
 
     @Override
@@ -283,6 +319,11 @@ public class ProgramToolActivity extends AppCompatActivity
         if(getService() != null)
         {
             getService().setIpcCallbackhandler(null);
+
+            if(getService().isInProgramMode())
+            {
+                exitProgramMode(false);
+            }
         }
     }
 
@@ -324,7 +365,7 @@ public class ProgramToolActivity extends AppCompatActivity
                 saveModifiedData(PROGRAM_DATA_TYPE_CH,new byte[16]);
                 updateFragmentProgramData(PROGRAM_DATA_TYPE_CH,new byte[16]);
 
-                //intoProgramMode();
+                intoProgramMode();
             }
         },500);
     }
@@ -383,16 +424,21 @@ public class ProgramToolActivity extends AppCompatActivity
     {
         mProgressDialog.setMessage("Enter Program...Please wait.");
         mProgressDialog.setMax(0);
+        mProgressDialog.setCancelable(false);
         mProgressDialog.show();
 
         getService().askIntoProgramMode();
     }
 
-    private void exitProgramMode()
+    private void exitProgramMode(final boolean showDialog)
     {
-//        mProgressDialog.setMessage("Exit Program...Please wait.");
-//        mProgressDialog.setMax(0);
-//        mProgressDialog.show();
+        if(showDialog)
+        {
+            mProgressDialog.setMessage("Exit Program...Please wait.");
+            mProgressDialog.setMax(0);
+            mProgressDialog.setCancelable(false);
+            mProgressDialog.show();
+        }
 
         getService().askExitProgramMode();
     }
@@ -411,6 +457,11 @@ public class ProgramToolActivity extends AppCompatActivity
 
     public void syncSetting()
     {
+        syncSetting(0);
+    }
+
+    public void syncSetting(final int mode)
+    {
         final int currentIndex = mTabFragment.getCurrentIndex();
         if(currentIndex < 0)
         {
@@ -423,12 +474,17 @@ public class ProgramToolActivity extends AppCompatActivity
             return;
         }
 
-        if(!mProgressDialog.isShowing())
+        if(mode == 0)
         {
             mProgressDialog.setMessage("Sync...Please wait.");
-            mProgressDialog.show();
-            mProgressDialog.setMax(0);
         }
+        else
+        {
+            mProgressDialog.setMessage("Verify...Please wait.");
+        }
+
+        mProgressDialog.show();
+        mProgressDialog.setMax(0);
 
         switch (currentIndex)
         {
@@ -612,6 +668,26 @@ public class ProgramToolActivity extends AppCompatActivity
         else
         {
             setSaveButtonEnable(false);
+        }
+    }
+
+    private void refreshUI(final boolean enable)
+    {
+        if(enable)
+        {
+            setSyncButtonEnable(true);
+            //setSaveButtonEnable(true);
+            mTabFragment.getTab().setTabClickable(true);
+            mTabFragment.getPager().setPagingEnabled(true);
+            mTabFragment.setMaskVisible(false);
+        }
+        else
+        {
+            setSyncButtonEnable(false);
+            setSaveButtonEnable(false);
+            mTabFragment.getTab().setTabClickable(false);
+            mTabFragment.getPager().setPagingEnabled(false);
+            mTabFragment.setMaskVisible(true);
         }
     }
 

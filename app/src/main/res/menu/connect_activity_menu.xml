@@ -8,6 +8,6 @@
           android:showAsAction="always" />
 
     <item android:id="@+id/action_tool"
-          android:title="TOOL"
+          android:title="AF/SF"
           android:showAsAction="always" />
 </menu>

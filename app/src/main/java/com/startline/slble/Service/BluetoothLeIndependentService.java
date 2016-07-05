@@ -69,6 +69,7 @@ public class BluetoothLeIndependentService extends Service
 	private final String NEW_LINE_CHARACTER = "<BR/>";
 	private final int OFF = 0;
 	private final int ON = 1;
+	private final int TIMEOUT_PROGRAM_TASK = 2000;
 
 	public static final int CSTA_STA = 0;
 	public static final int[] TX_POWER_LEVEL = new int[]
@@ -2484,7 +2485,7 @@ public class BluetoothLeIndependentService extends Service
 					{
 						clearTaskQueue();
 
-						addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,0,null));
+						addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,0,null));
 					}
 
 					handleReceiveCsta(receiveData,false);
@@ -2582,7 +2583,7 @@ public class BluetoothLeIndependentService extends Service
 							{
 								clearTaskQueue();
 
-								addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,0,null));
+								addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,0,null));
 							}
 						}
 
@@ -3126,7 +3127,7 @@ public class BluetoothLeIndependentService extends Service
 			return;
 		}
 
-		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_READ_PROGRAM_DATA,5000,genProgramData(id,addHigh,addLow,length,null));
+		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_READ_PROGRAM_DATA,TIMEOUT_PROGRAM_TASK,genProgramData(id,addHigh,addLow,length,null));
 	}
 
 	public void writeProgramTable(final int id,final int addHigh,final int addLow,final byte[] data)
@@ -3141,7 +3142,7 @@ public class BluetoothLeIndependentService extends Service
 		appendLog(formatSendString("WriteProgramTable  : "+ NEW_LINE_CHARACTER + s));
 
 
-		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_WRITE_PROGRAM_DATA,5000,genProgramData(id,addHigh,addLow,data.length,data));
+		addTaskToQueue(CMD_PROGRAM_DATA,(byte)PARAM_WRITE_PROGRAM_DATA,TIMEOUT_PROGRAM_TASK,genProgramData(id,addHigh,addLow,data.length,data));
 	}
 
 	public void sendProgramTablePacket(final int parameter,final int addHigh,final int addLow,final int length,final byte[] data)
@@ -3197,14 +3198,14 @@ public class BluetoothLeIndependentService extends Service
 			return;
 		}
 
-		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_INTO_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,1,null));
+		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_INTO_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,1,null));
 	}
 
 	public void askExitProgramMode()
 	{
 		clearTaskQueue();
 
-		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,5000,genProgramData(-1,0,0,1,null));
+		addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,1,null));
 	}
 
 	public void sendIntoProgramMode()

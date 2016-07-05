@@ -78,6 +78,8 @@ public class SlidingTabLayout extends HorizontalScrollView {
     private int mTabViewTextViewId;
     private int mTabViewIconId;
 
+    private boolean mTabClickable = true;
+
     private ViewPager mViewPager;
     private ViewPager.OnPageChangeListener mViewPagerPageChangeListener;
 
@@ -173,6 +175,11 @@ public class SlidingTabLayout extends HorizontalScrollView {
             viewPager.setOnPageChangeListener(new InternalViewPagerListener());
             populateTabStrip();
         }
+    }
+
+    public void setTabClickable(final boolean enable)
+    {
+        mTabClickable = enable;
     }
 
     /**
@@ -334,9 +341,13 @@ public class SlidingTabLayout extends HorizontalScrollView {
 
     private class TabClickListener implements View.OnClickListener {
         @Override
-        public void onClick(View v) {
-            for (int i = 0; i < mTabStrip.getChildCount(); i++) {
-                if (v == mTabStrip.getChildAt(i)) {
+        public void onClick(View v)
+        {
+            if(!mTabClickable) return;
+            for (int i = 0; i < mTabStrip.getChildCount(); i++)
+            {
+                if (v == mTabStrip.getChildAt(i))
+                {
                     mViewPager.setCurrentItem(i);
                     return;
                 }

@@ -224,6 +224,8 @@ public class LntFragment extends BaseFragment
     public void onResume()
     {
         super.onResume();
+
+        mRootView.findViewById(R.id.txt_title_pin_code).requestFocus();
         refresh();
     }
 

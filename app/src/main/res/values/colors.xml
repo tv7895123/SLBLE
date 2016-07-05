@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name = "mask">#A0333333</color>
     <color name = "light_gray">#3FEEEEEE</color>
     <color name = "dark_gray">#303030</color>
     <color name = "gray">#7F7F7F</color>

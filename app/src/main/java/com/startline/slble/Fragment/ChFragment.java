@@ -489,7 +489,8 @@ public class ChFragment extends BaseFragment
         spinnerChannel.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,
         new String[]
         {
-                "[ 1 ] Trunk release", "[ 2 ] 2-step unlock", "[ 3 ] Engine stop delay 2'S then output 3'S", "[ 4 ] After Arm (20'S)", "[ 5 ] Start killer", "[ 6 ] Remote Control (4L+2)", "[ 7 ] Lock Output", "[ 8 ] UnLock Output", "[ 9 ] Parking Light ", "[ 10 ] IGN", "[ 11 ] ACC", "[ 12 ] IGN2"
+                "[ 1 ] Channel 1", "[ 2 ] Channel 2", "[ 3 ] Channel 3", "[ 4 ] Channel 4", "[ 5 ] Channel 5", "[ 6 ] Channel 6", "[ 7 ] Channel 7", "[ 8 ] Channel 8", "[ 9 ] Channel 9", "[ 10 ] Channel 10", "[ 11 ] Channel 11", "[ 12 ] Channel 12"
+                //"[ 1 ] Trunk release", "[ 2 ] 2-step unlock", "[ 3 ] Engine stop delay 2'S then output 3'S", "[ 4 ] After Arm (20'S)", "[ 5 ] Start killer", "[ 6 ] Remote Control (4L+2)", "[ 7 ] Lock Output", "[ 8 ] UnLock Output", "[ 9 ] Parking Light ", "[ 10 ] IGN", "[ 11 ] ACC", "[ 12 ] IGN2"
         }));
 
         spinnerFunction.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,
@@ -525,6 +526,9 @@ public class ChFragment extends BaseFragment
     public void onResume()
     {
         super.onResume();
+
+        mRootView.findViewById(R.id.layout_channel).requestFocus();
+
         refresh();
     }
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/txt_mobile_number_value"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginLeft="3dp"
+    android:layout_marginRight="3dp"
+    android:gravity="center_horizontal"
+    android:textColor="@color/green"
+    android:textAppearance="?android:attr/textAppearanceSmall"
+    android:textSize="16sp"
+    android:text="SAVE"/>

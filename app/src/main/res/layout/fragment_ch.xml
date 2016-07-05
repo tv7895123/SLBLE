@@ -16,6 +16,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp">
             <LinearLayout
+                    android:id="@+id/layout_channel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -24,6 +25,8 @@
                     android:paddingLeft="8dp"
                     android:paddingRight="5dp"
                     android:paddingBottom="10dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
                     android:background="@drawable/progrom_item_border">
                 <LinearLayout
                         android:layout_width="match_parent"
@@ -83,7 +86,7 @@
                     android:gravity="center_vertical"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:text="FUNCTION"
+                    android:text="SPECIAL FUNCTION"
                     android:textColor="@color/white"
                     android:background="@color/md_red_400"/>
         </RelativeLayout>
