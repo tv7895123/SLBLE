@@ -72,7 +72,9 @@ public class SettingListActivity extends Activity
 			final String title = (String)buttonView.getTag();
 			if(title.equals(getString(R.string.title_auto_connect)))
 			{
-				if(service != null && service.isDeviceInitialized())
+				if(service != null
+					//&& service.isDeviceInitialized()
+					)
 				{
 					service.setAutoConnectOnDisconnect(isChecked);
 					service.saveAppSetting();
@@ -80,7 +82,9 @@ public class SettingListActivity extends Activity
 			}
 			else if(title.equals(getString(R.string.title_auto_scroll)))
 			{
-				if(service != null && service.isDeviceInitialized())
+				if(service != null
+					//&& service.isDeviceInitialized()
+				)
 				{
 					service.setAutoScroll(isChecked);
 					service.saveAppSetting();
@@ -396,13 +400,15 @@ public class SettingListActivity extends Activity
 //					break;
 					case 4:	// Keyless Lock
 					{
-						final int level = (int)modifiedSetting[1] & 0x0F;
+						int level = (int)modifiedSetting[1] & 0x0F;
+						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
 						map.put("value",KEYLESS_LEVEL[level]);
 					}
 					break;
 					case 5:	// Keyless Unlock
 					{
-						final int level = (int)((modifiedSetting[1]>>4) & 0x0F);
+						int level = (int)((modifiedSetting[1]>>4) & 0x0F);
+						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
 						map.put("value",KEYLESS_LEVEL[level]);
 					}
 					break;
