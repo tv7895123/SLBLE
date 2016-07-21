@@ -1799,6 +1799,7 @@ public class BluetoothLeIndependentService extends Service
 		setupTaskTimeout(TASK_BOND,10*1000);
 	}
 
+	// Keyless
 	// Connect function
 	private void _connect()
 	{
