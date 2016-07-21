@@ -2274,7 +2274,12 @@ public class BluetoothLeIndependentService extends Service
 		try
 		{
 			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
-			mProgramModeState = OFF;
+			if(isInProgramMode())
+			{
+				mProgramModeState = OFF;
+				addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,0,null));
+			}
+
 
 			// Clear timer when disconnected, avoid re-connect automatically
 			removeConnectionTimeout(); //handleBleDisconnect
@@ -2915,6 +2920,9 @@ public class BluetoothLeIndependentService extends Service
 								final ProgramData programData = (ProgramData)mCurrentTask.taskData;
 								if(programData == null)
 								{
+									notifyProgramResult(mCurrentTask);
+									mCurrentTask = null;
+									LogUtil.d(TAG,"Task has no data , skip action",Thread.currentThread().getStackTrace());
 									continue;
 								}
 
@@ -2938,17 +2946,17 @@ public class BluetoothLeIndependentService extends Service
 									}
 									else
 									{
+										final String s = formatByteArrayToLog(programData.dataBuffer);
+
 										// Read
 										if(mCurrentTask.taskParameter == PARAM_READ_PROGRAM_DATA)
 										{
-											final String s = formatByteArrayToLog(programData.dataBuffer);
 											LogUtil.d(TAG,"Read finish : " + s,Thread.currentThread().getStackTrace());
 											appendLog(String.format("Read 0x%02X 0x%02X",programData.addressHigh & 0xFF,programData.addressLow & 0xFF) + NEW_LINE_CHARACTER + s);
 										}
 										// Write
 										else if(mCurrentTask.taskParameter == PARAM_WRITE_PROGRAM_DATA)
 										{
-											final String s = formatByteArrayToLog(programData.dataBuffer);
 											LogUtil.d(TAG,"Write finish: " + s,Thread.currentThread().getStackTrace());
 											appendLog(String.format("Write 0x%02X 0x%02X",programData.addressHigh & 0xFF,programData.addressLow & 0xFF) + NEW_LINE_CHARACTER + s);
 										}
@@ -3054,7 +3062,6 @@ public class BluetoothLeIndependentService extends Service
 			}
 		}
 	}
-
 
 	private byte[] calculateOffsetAddress(final byte addHigh,final byte addLow,final int length)
 	{

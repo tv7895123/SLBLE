@@ -132,14 +132,22 @@ public class ProgramToolActivity extends AppCompatActivity
                     {
                         if(programData.dataCount == programData.dataLength)
                         {
-                            //syncAllData();
-                            refreshUI(true);
-                            syncSetting();
-                            Toast.makeText(context,"Enter program mode success",Toast.LENGTH_SHORT).show();
+                            // If dialog is showing , show result
+                            // Otherwise, it's a background task
+                            if(mProgressDialog.isShowing())
+                            {
+                                //syncAllData();
+                                refreshUI(true);
+                                syncSetting();
+                                Toast.makeText(context,"Enter program mode success",Toast.LENGTH_SHORT).show();
+                            }
                         }
                         else
                         {
-                            Toast.makeText(context,"Enter program mode failed",Toast.LENGTH_SHORT).show();
+                            if(mProgressDialog.isShowing())
+                            {
+                                Toast.makeText(context,"Enter program mode failed",Toast.LENGTH_SHORT).show();
+                            }
                         }
                     }
                     // Exit Program mode
@@ -159,9 +167,11 @@ public class ProgramToolActivity extends AppCompatActivity
 
                             if(mFinish)
                             {
-                                mHandler.postDelayed(new Runnable() {
+                                mHandler.postDelayed(new Runnable()
+                                {
                                     @Override
-                                    public void run() {
+                                    public void run()
+                                    {
                                         finish();
                                     }
                                 },500);
@@ -278,7 +288,7 @@ public class ProgramToolActivity extends AppCompatActivity
             return true;
             case R.id.action_into:
             {
-                intoProgramMode();
+                intoProgramMode(true);
             }
             return true;
             case R.id.action_exit:
@@ -380,7 +390,7 @@ public class ProgramToolActivity extends AppCompatActivity
                 saveModifiedData(PROGRAM_DATA_TYPE_CH,new byte[16]);
                 updateFragmentProgramData(PROGRAM_DATA_TYPE_CH,new byte[16]);
 
-                intoProgramMode();
+                intoProgramMode(true);
             }
         },500);
     }
@@ -435,12 +445,15 @@ public class ProgramToolActivity extends AppCompatActivity
         handleProgramDataChanged(programData.dataId,programData.dataBuffer);
     }
 
-    private void intoProgramMode()
+    private void intoProgramMode(final boolean showDialog)
     {
-        mProgressDialog.setMessage("Enter Program...Please wait.");
-        mProgressDialog.setMax(0);
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
+        if(showDialog)
+        {
+            mProgressDialog.setMessage("Enter Program...Please wait.");
+            mProgressDialog.setMax(0);
+            mProgressDialog.setCancelable(false);
+            mProgressDialog.show();
+        }
 
         getService().askIntoProgramMode();
     }

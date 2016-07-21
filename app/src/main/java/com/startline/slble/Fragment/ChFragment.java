@@ -239,9 +239,9 @@ public class ChFragment extends BaseFragment
                     else
                     {
                         final String[] conditions_on = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_ON]);
-                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_1 & 0x0F]]));
-                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2 & 0x0F]]));
-                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3 & 0x0F]]));
+                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_1] & 0x0F]));
+                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2] & 0x0F]));
+                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3] & 0x0F]));
                     }
                 }
                 break;
@@ -301,9 +301,9 @@ public class ChFragment extends BaseFragment
                     else
                     {
                         final String[] conditions_off = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_OFF]);
-                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1 & 0xF0]) >> 4]));
-                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2 & 0xF0]) >> 4]));
-                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3 & 0xF0]) >> 4]));
+                        spinnerCondOff1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1] & 0xF0) >> 4]));
+                        spinnerCondOff2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2] & 0xF0) >> 4]));
+                        spinnerCondOff3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3] & 0xF0) >> 4]));
                     }
                 }
                 break;
