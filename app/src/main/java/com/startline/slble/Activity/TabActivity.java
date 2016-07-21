@@ -460,7 +460,7 @@ public class TabActivity extends FragmentActivity
 
 		// Automatically connects to the device upon successful start-up initialization.
 		mBluetoothLeService.setManualConnect(true);
-		mBluetoothLeService.connectDevice(mDeviceAddress);
+		mBluetoothLeService.initConnectDevice(mDeviceAddress);
 		mAutoScrollDown = mBluetoothLeService.getAutoScroll();
 	}
 

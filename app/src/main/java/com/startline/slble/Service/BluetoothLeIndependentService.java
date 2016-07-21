@@ -102,6 +102,12 @@ public class BluetoothLeIndependentService extends Service
 	public static final int ACK_FLAG_TX_POWER = 0x1;
 	public static final int ACK_FLAG_TX_POWER_KEYLESS = 0x2;
 
+	//-------------------------------------------------------------------
+	// Timeout Task Index
+	public final int TASK_NONE = 0;
+	public final int TASK_BOND = 0x01;
+	public final int TASK_BIND = 0x02;
+
 	//--------------------------------------------------------------------
     // Connection State
 	public static final int CONNECTION_STATE_BONDING = 0;
@@ -122,6 +128,7 @@ public class BluetoothLeIndependentService extends Service
 
     //--------------------------------------------------------------------
 	// Process
+	private final int TASK_BIND_RETRY_MAX = 10;
 	public final long TIMEOUT_BOND_TO_DISCONNECT = 8000;
 	public static final long TIMEOUT_TASK_RETRY = 3 * 1000;
 	public static final String KEYWORD_SLBLE = "SLBLE";
@@ -223,12 +230,14 @@ public class BluetoothLeIndependentService extends Service
 	private int mDeviceInitState = INIT_STATE_NONE;
 	private boolean mScanning;
 	private int mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+	private int mTimeoutTask = TASK_NONE;
 	private byte mPacketId = 0x0;
 	private byte[] mReceivedData = null;
 	private byte[] mReceivedDataBuffer = null;
 	private int mReceiveDataCounter = 0;
 	private int mTaskRetry = 0;
 	private int mReadRssiInterval = READ_RSSI_INTERVAL;
+	private int mBindRetry = 0;
 
 	// Keyless
 	private int mConnectTimeLimitScreenOn = KEYLESS_CONNECT_TIME_MAX;		// Limit times for screen on, default MAX
@@ -241,6 +250,8 @@ public class BluetoothLeIndependentService extends Service
 	private int mProgramModeState = OFF;
 	private int mQueueStartIndex = 0;
 	private int mQueueEndIndex = 0;
+
+	private long mDisconnectTimeStamp = 0;
 	//=================================================================//
 	//																   //
 	//  Object                                                         //
@@ -266,7 +277,6 @@ public class BluetoothLeIndependentService extends Service
 	private boolean mBTConnectionRequest = false;
 	private Runnable mRunnableBondToConnect = null;
 	private static Thread mThreadConnect = null;
-	private static Runnable mRunnableConnectDevice = null;
 	private static Thread mThreadProgram = null;
 
 
@@ -370,7 +380,7 @@ public class BluetoothLeIndependentService extends Service
 					{
 						if(mThreadConnect == null)
 						{
-							connectDevice();
+							_connect(); // ACTION_SCREEN_OFF
 						}
 					}
 				},2000);
@@ -383,7 +393,7 @@ public class BluetoothLeIndependentService extends Service
 
 				if(mThreadConnect == null)
 				{
-					connectDevice();
+					_connect(); //ACTION_SCREEN_ON
 				}
 			}
 
@@ -405,7 +415,7 @@ public class BluetoothLeIndependentService extends Service
 			LogUtil.d(TAG,bondingLog ,Thread.currentThread().getStackTrace());
 			appendLog(bondingLog);
 
-			if(mBluetoothDevice == null)
+			if(mBluetoothDevice == null || device == null)
 			{
 				return;
 			}
@@ -417,6 +427,14 @@ public class BluetoothLeIndependentService extends Service
 				// After device bonded, connect to it
 				if (previousBondState == BluetoothDevice.BOND_BONDING && bondState == BluetoothDevice.BOND_BONDED)
 				{
+					if(mDeviceInitState != INIT_STATE_BONDING)
+					{
+						LogUtil.d(TAG,"Not at bonding state, skip" ,Thread.currentThread().getStackTrace());
+						return;
+					}
+
+					removeTaskTimeout(); // Remove Bonding timeout runnable
+
 					appendLog("Device bonded");
 					if(mBluetoothGatt == null)
 					{
@@ -437,27 +455,10 @@ public class BluetoothLeIndependentService extends Service
 							public void run()
 							{
 								LogUtil.d(TAG,"mRunnableBondToConnect",Thread.currentThread().getStackTrace());
-
-								if(isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+								// Timeout and disconnect, wait next connected
+								if(mBluetoothDevice != null && mInputDeviceProfile != null)
 								{
-									// Timeout and disconnect, wait next connected
-									if(mBluetoothDevice != null && mInputDeviceProfile != null)
-									{
-										closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
-									}
-								}
-								else
-								{
-									if(mRunnableBondToConnect != null)
-									{
-										mHandler.removeCallbacks(mRunnableBondToConnect);
-										mRunnableBondToConnect = null;
-									}
-
-									mDeviceInitState = INIT_STATE_BOND_OK;
-									//closeBTConnection(bluetoothDevice.getAddress());
-
-									_connect();
+									closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
 								}
 							}
 						};
@@ -470,20 +471,48 @@ public class BluetoothLeIndependentService extends Service
 				}
 				else if (previousBondState == BluetoothDevice.BOND_BONDING && bondState == BluetoothDevice.BOND_NONE)
 				{
+					if(mDeviceInitState != INIT_STATE_BONDING)
+					{
+						LogUtil.d(TAG,"Not at bonding state, skip" ,Thread.currentThread().getStackTrace());
+						return;
+					}
+
+					removeTaskTimeout(); // Remove Bonding timeout runnable
 					appendLog("Bond failed");
 					broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BOND_FAILED));
+				}
+				else if(previousBondState == BluetoothDevice.BOND_BONDED && bondState == BluetoothDevice.BOND_NONE)
+				{
+					initPreferredDevice("");
 				}
 			}
 		}
 	};
 
 	// Action when connection timeout
-	private final Runnable mRunnableConnectTimeout = new Runnable()
+	private final Runnable mRunnableTimeout = new Runnable()
 	{
 		@Override
 		public void run()
 		{
-			disconnect(true);   //mRunnableConnectTimeout
+			LogUtil.d(TAG,"Task timeout",Thread.currentThread().getStackTrace());
+			mHandler.removeCallbacks(mRunnableTimeout);
+			switch (mTimeoutTask)
+			{
+				case TASK_BOND:
+				{
+					LogUtil.d(TAG,"Connect timeout",Thread.currentThread().getStackTrace());
+					broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BOND_FAILED));
+				}
+				break;
+				case TASK_BIND:
+				{
+					LogUtil.d(TAG,"Bind timeout",Thread.currentThread().getStackTrace());
+					disconnect(true);
+					handleBleDisconnect();
+				}
+				break;
+			}
 		}
 	};
 
@@ -677,9 +706,6 @@ public class BluetoothLeIndependentService extends Service
 					// Get device name
 					if (characteristic.getUuid().toString().equalsIgnoreCase(CHAR_DEVICE_NAME))
 					{
-						// After get device name, we consider the connection is completed
-						removeConnectionTimeout(); // onCharacteristicRead , get device name
-
 						// Get and set device name
 						String deviceName = new String(characteristic.getValue(), "UTF8");
 						if(deviceName.length() > 15)
@@ -770,7 +796,7 @@ public class BluetoothLeIndependentService extends Service
 						if (gatt.getDevice().getBondState() == BluetoothDevice.BOND_NONE)
 						{
 							appendLog("GATT_INSUFFICIENT_AUTHENTICATION");
-							_bondingDevice();
+							//_bonding();
 						}
 						else
 						{
@@ -927,7 +953,6 @@ public class BluetoothLeIndependentService extends Service
 
 							if(mBluetoothDevice != null)
 							{
-								removeConnectDeviceRunnable();
 								setManualConnect(true);
 								connectDevice(mBluetoothDevice.getAddress());  // Manual connect
 							}
@@ -1216,7 +1241,7 @@ public class BluetoothLeIndependentService extends Service
 		{
 			// Set up bluetooth resources
 			setBluetoothGatt(cachedBluetoothDevice.bluetoothGatt);
-			setBluetoothDevice(cachedBluetoothDevice.bluetoothDevice);
+			initPreferredDevice(address);
 
 			// Set as connected
 			mConnectionState = BluetoothProfile.STATE_CONNECTED;
@@ -1232,8 +1257,14 @@ public class BluetoothLeIndependentService extends Service
 		{
 			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
 			setBluetoothGatt(null);
-			setBluetoothDevice(null);
+			initPreferredDevice("");
 		}
+	}
+
+	private void setupTaskTimeout(final int task,final int timeout)
+	{
+		mTimeoutTask = task;
+		setupTimerTask(mRunnableTimeout,timeout,-1);
 	}
 
 	private void setupTimerTask(final Runnable task,final long delay,final long period)
@@ -1250,6 +1281,13 @@ public class BluetoothLeIndependentService extends Service
 		{
 			mHandler.postDelayed(task,delay);
 		}
+	}
+
+	private void removeTaskTimeout()
+	{
+		LogUtil.d(TAG,"",Thread.currentThread().getStackTrace());
+		mTimeoutTask = TASK_NONE;
+		mHandler.removeCallbacks(mRunnableTimeout);
 	}
 
 	private void loadAppSetting(final String appSetting)
@@ -1291,7 +1329,10 @@ public class BluetoothLeIndependentService extends Service
 
 	public void clearAllDevice()
 	{
-		mBleDeviceRssiAdapter.clear();
+		if (mBleDeviceRssiAdapter != null)
+		{
+			mBleDeviceRssiAdapter.clear();
+		}
 	}
 
 	public BluetoothDevice getBluetoothDevice()
@@ -1369,6 +1410,18 @@ public class BluetoothLeIndependentService extends Service
             return false;
     }
 
+	private void initPreferredDevice(final String address)
+	{
+		if(mBluetoothAdapter == null || address.length() == 0)
+		{
+			mBluetoothDevice = null;
+		}
+		else
+		{
+			mBluetoothDevice = mBluetoothAdapter.getRemoteDevice(address);
+		}
+	}
+
 	private void initDeviceState(final int nextState)
 	{
 		try
@@ -1410,7 +1463,10 @@ public class BluetoothLeIndependentService extends Service
 						playLoginSuccessSound();
 						broadcastNotifyUi(getProcessStepIntent(INIT_STATE_END));
 						mDeviceInitState = INIT_STATE_END;
-						removeConnectionTimeout();
+
+						// After init finished, must remove timeout task
+						removeTaskTimeout(); // Remove connect timeout runnable
+
 						mManualConnect = false;
 
 						// After connecting and verified, add device to cache list
@@ -1488,6 +1544,12 @@ public class BluetoothLeIndependentService extends Service
     //*****************************************************************//
     //  Scan BLE function                                              //
     //*****************************************************************//
+	public void initStopScan()
+	{
+		cancelScanTimer();
+		stopScan();
+	}
+
 	public void startScan()
 	{
 		scanLeDevice(true);
@@ -1590,6 +1652,11 @@ public class BluetoothLeIndependentService extends Service
             return false;
         }
 
+		if(mInputDeviceProfile == null)
+		{
+			getProfileProxy();
+		}
+
         return true;
     }
 
@@ -1602,80 +1669,125 @@ public class BluetoothLeIndependentService extends Service
 		return initialize();
     }
 
+	private boolean isBluetoothAvailable()
+	{
+		// Check bluetooth adapter
+		if(mBluetoothAdapter == null)
+		{
+			LogUtil.e(TAG, "[Error] mBluetoothAdapter is null.  Unable to connect.",Thread.currentThread().getStackTrace());
+			return false;
+		}
+
+		if(!mBluetoothAdapter.isEnabled())
+		{
+			LogUtil.e(TAG, "[Error] mBluetoothAdapter is not enabled.  Unable to connect.",Thread.currentThread().getStackTrace());
+			return false;
+		}
+
+		if (mBluetoothDevice == null)
+		{
+			LogUtil.e(TAG, "[Error] mBluetoothDevice not found.  Unable to connect.",Thread.currentThread().getStackTrace());
+			return false;
+		}
+
+		return true;
+	}
+
 	public int getConnectionState()
 	{
 		return mConnectionState;
 	}
 
-
-	// Connect to current device
-	public void connectDevice()
+	// init a connection
+	// Maybte a Connect or a Bonding
+	public void initConnectDevice(final String address)
 	{
-		if(mBluetoothDevice != null)
+		// init mBluetoothDevice , get device from adapter
+		initPreferredDevice(address);
+
+		// Check bluetooth adapter
+		if(!isBluetoothAvailable())
 		{
-			connectDevice(mBluetoothDevice.getAddress());
+			return;
+		}
+
+		if(address == null || address.length() == 0)
+		{
+			return;
+		}
+
+		if(mBluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
+		{
+			connectDevice(address);
+		}
+		else
+		{
+			bondingDevice(address);
 		}
 	}
 
-	// init connection with address
+	// Connection with address
 	public void connectDevice(final String address)
 	{
 		LogUtil.d(TAG,"[Process] connectDevice address : "+address,Thread.currentThread().getStackTrace());
 
-		// Check bluetooth adapter
-		if(mBluetoothAdapter == null)
-		{
-			LogUtil.e(TAG, "[Error] mBluetoothAdapter is null.  Unable to connect.",Thread.currentThread().getStackTrace());
-			return;
-		}
-
 		// init mBluetoothDevice , get device from adapter
-		setBluetoothDevice(mBluetoothAdapter.getRemoteDevice(address));
-		if (mBluetoothDevice == null)
+		initPreferredDevice(address);
+
+		// Check bluetooth adapter
+		if(!isBluetoothAvailable())
 		{
-			LogUtil.e(TAG, "[Error] mBluetoothDevice not found.  Unable to connect.",Thread.currentThread().getStackTrace());
 			return;
 		}
 
-		// If device not bonded, start bonding
-		if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
+		if(address == null || address.length() == 0)
 		{
-			appendLog("Not bonded");
-			LogUtil.d(TAG,"Not bonded",Thread.currentThread().getStackTrace());
-			_bondingDevice();
+			return;
 		}
-		// Device bonded, try to connect to it
-		else
+
+		// If paired with APP, start _connect or _bind
+		// Connected with OS
+		if(isBluetoothDeviceConnected(address))
 		{
-			// Connected with OS
-			if(isBluetoothDeviceConnected(address))
+			// Cached with App
+			if(isBluetoothDeviceCached(address))
 			{
-				appendLog("Connected with OS");
-				LogUtil.d(TAG,"Connected with OS",Thread.currentThread().getStackTrace());
-				// Cached with App
-				if(isBluetoothDeviceCached(address))
-				{
-					LogUtil.d(getPackageName(),"Device cached",Thread.currentThread().getStackTrace());
-					appendLog("Device cached");
-					setupBluetoothDeviceFromCache(address);
-				}
-				else
-				{
-					LogUtil.d(getPackageName(),"Device connected not cached with app, start binding ",Thread.currentThread().getStackTrace());
-					appendLog("Device not cached");
-					// Connected,not cached, start bind it with app
-					_bind();
-				}
+				LogUtil.d(getPackageName(),"Device cached",Thread.currentThread().getStackTrace());
+				setupBluetoothDeviceFromCache(address);
+				return ;
 			}
-			// Not connected
 			else
 			{
-				appendLog("Not connected with OS");
-				LogUtil.d(TAG,"Not connected with OS",Thread.currentThread().getStackTrace());
-				// start connect
-				_connect();
+				LogUtil.d(getPackageName(),"Device connected not cached with app, start binding ",Thread.currentThread().getStackTrace());
+
+				// Connected,not cached, start bind it with app
+				_bind(); //connectDevice
 			}
 		}
+		// Not connected
+		else
+		{
+			LogUtil.d(getPackageName(),"Not connected with OS",Thread.currentThread().getStackTrace());
+
+			// start connect
+			_connect(); //connectDevice
+		}
+	}
+
+	public void bondingDevice(final String address)
+	{
+		initPreferredDevice(address);
+		if(!isBluetoothAvailable())
+		{
+			return;
+		}
+
+		if(mBluetoothDevice.getBondState() != BluetoothDevice.BOND_NONE)
+		{
+			return;
+		}
+
+		_bondingDevice();
 	}
 
 	// Bond function
@@ -1684,6 +1796,7 @@ public class BluetoothLeIndependentService extends Service
 		mDeviceInitState = INIT_STATE_BONDING;
 		broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BONDING));
 		mBluetoothDevice.createBond();
+		setupTaskTimeout(TASK_BOND,10*1000);
 	}
 
 	// Connect function
@@ -1692,22 +1805,32 @@ public class BluetoothLeIndependentService extends Service
 		LogUtil.d(TAG, "[Process] connect",Thread.currentThread().getStackTrace());
 		try
 		{
-			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
+			if(!isBluetoothAvailable())
+			{
+				return;
+			}
 
-			int delayTime = 0;
+			if(mDeviceInitState != INIT_STATE_NONE && mDeviceInitState != INIT_STATE_BOND_OK)
+			{
+				LogUtil.d(TAG, "DeviceInitState not at NONE",Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			if(mThreadConnect != null)
 			{
 				LogUtil.d(TAG, "Connect thread is running, skip",Thread.currentThread().getStackTrace());
 				return;
 			}
 
+			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
+
+			int delayTime = 0;
 			final String address = mBluetoothDevice.getAddress();
 			mThreadConnect = new Thread()
 			{
 				@Override
 				public void run()
 				{
-
 					int tryTimes = 0;
 					boolean gotException = false;
 
@@ -1718,6 +1841,15 @@ public class BluetoothLeIndependentService extends Service
 					{
 						try
 						{
+							// Set a delay to start connecting after IvBT disconnected
+							final long current = System.currentTimeMillis();
+							if(current-mDisconnectTimeStamp < 3*1000)
+							{
+								LogUtil.d(TAG, String.format("mDisconnectTimeStamp = %d, current = %d, difference = %d",mDisconnectTimeStamp,current,current-mDisconnectTimeStamp),Thread.currentThread().getStackTrace());
+								Thread.sleep(1000);
+								continue;
+							}
+
 							// Get bond device set from BluetoothAdapter, make sure device is bond
 							final Set<BluetoothDevice> bondDeviceSet = mBluetoothAdapter.getBondedDevices();
 							boolean bond = false;
@@ -1736,7 +1868,26 @@ public class BluetoothLeIndependentService extends Service
 							{
 								LogUtil.d(getPackageName(),"Device not connected, start connect "+tryTimes,Thread.currentThread().getStackTrace());
 								tryTimes++;
-								createBTConnection();
+
+								if(!mScanning)
+								{
+									clearAllDevice();
+									startScan();
+
+									Thread.sleep(200);
+
+									stopScan();
+									for(int i=0 ;i<mBleDeviceRssiAdapter.getCount(); i++)
+									{
+										final BleDeviceRssi deviceRssi = mBleDeviceRssiAdapter.getDevice(i);
+										LogUtil.d(TAG,deviceRssi.bluetoothDevice.getAddress(),Thread.currentThread().getStackTrace());
+										if(deviceRssi.bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
+										{
+											createBTConnection();
+											break;
+										}
+									}
+								}
 							}
 							// Device un-bond
 							else
@@ -1771,37 +1922,56 @@ public class BluetoothLeIndependentService extends Service
 		LogUtil.d(TAG, "[Process] _bind",Thread.currentThread().getStackTrace());
 		try
 		{
-			if(mBluetoothDevice == null)
+			if(!isBluetoothAvailable())
 			{
-				LogUtil.d(TAG, "[Error] mBluetoothDevice is null.",Thread.currentThread().getStackTrace());
+				return;
+			}
+
+			if(!isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.e(TAG,"Device not connected, skip binding",Thread.currentThread().getStackTrace());
+				if(mThreadConnect == null)
+				{
+					_connect(); //_bind
+				}
+				return;
+			}
+
+			if(isBluetoothDeviceCached(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.e(TAG,"Device is cached, skip binding",Thread.currentThread().getStackTrace());
 				return;
 			}
 
 			final int connectionState = getConnectionState();
-			if(connectionState == BluetoothProfile.STATE_CONNECTING )
+			if(connectionState != BluetoothProfile.STATE_DISCONNECTED)
 			{
-				appendLog("Already binding");
-				LogUtil.e(TAG, "[Error] Already binding.",Thread.currentThread().getStackTrace());
+				LogUtil.e(TAG, "Current init state = "+mDeviceInitState,Thread.currentThread().getStackTrace());
+
+				if(connectionState == BluetoothProfile.STATE_CONNECTING )
+				{
+					LogUtil.e(TAG,"Device was binding, not connected with GATT",Thread.currentThread().getStackTrace());
+				}
+				else if(connectionState == BluetoothProfile.STATE_CONNECTED)
+				{
+					LogUtil.e(TAG,String.format("Device was binding, at step %d, skip binding",mDeviceInitState),Thread.currentThread().getStackTrace());
+				}
+				else if(connectionState == BluetoothProfile.STATE_DISCONNECTING)
+				{
+					LogUtil.e(TAG, "Disconnecting, wait until disconnected.",Thread.currentThread().getStackTrace());
+				}
+
 				return;
 			}
-			else if(connectionState == BluetoothProfile.STATE_CONNECTED)
-			{
-				appendLog("Already bind");
-				LogUtil.e(TAG, "[Error] Already bind.",Thread.currentThread().getStackTrace());
-				return;
-			}
-			else if(connectionState == BluetoothProfile.STATE_DISCONNECTING)
-			{
-				appendLog("Disconnecting, wait until disconnected");
-				LogUtil.e(TAG, "[Error] Disconnecting, wait until disconnected.",Thread.currentThread().getStackTrace());
-				return;
-			}
+
 			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CONNECTING));
 			mConnectionState = BluetoothProfile.STATE_CONNECTING;
+			setupTaskTimeout(TASK_BIND,10*1000);
 
 			// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
 			setBluetoothGatt(mBluetoothDevice.connectGatt(context, false, mGattCallback));
-			setupConnectionTimeout(5*1000);
+
+			mAllowReBind = true;
 		}
 		catch (Exception e)
 		{
@@ -1856,21 +2026,13 @@ public class BluetoothLeIndependentService extends Service
 		// Must get profile proxy before create BTConnection
 		if(mInputDeviceProfile == null)
 		{
-			// CreateBtConnection after get profile proxy
-			mBTConnectionRequest = true;
-
 			getProfileProxy();
 		}
 		else
 		{
-			// Get connected device list from OS and assign
-			final ArrayList<BluetoothDevice> connectedList = getConnectedDevice(mInputDeviceProfile);
-			if(mConnectedDeviceList == null || connectedList.size() > mConnectedDeviceList.size())
-			{
-				mConnectedDeviceList = connectedList;
-			}
+			// Get connected device list and assign
+			getConnectedDeviceFromProfile(mInputDeviceProfile);
 
-			// Make sure we have a preferred device to connect
 			if(mBluetoothDevice != null)
 			{
 				// If input device is not connected,create connection now
@@ -1878,67 +2040,11 @@ public class BluetoothLeIndependentService extends Service
 				{
 					createBTConnection(mInputDeviceProfile, mBluetoothDevice);
 				}
-				// Already connected with OS
-				else
-				{
-					// App not connected, bind it
-					if(getConnectionState() == BluetoothProfile.STATE_DISCONNECTED)
-					{
-						_bind();
-					}
-				}
 			}
 			return true;
 		}
 
 		return false;
-	}
-
-
-	private void setupConnectionTimeout(final int timeout)
-	{
-		setupTimerTask(mRunnableConnectTimeout,timeout,-1);
-	}
-
-	private void removeConnectionTimeout()
-	{
-		mHandler.removeCallbacks(mRunnableConnectTimeout);
-	}
-
-	private void setupConnectDeviceRunnable(final String address,final long delay)
-	{
-		removeConnectDeviceRunnable();
-
-		mRunnableConnectDevice = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				LogUtil.d(TAG, "Re-Connect in removeConnectedBluetoothDevice callback", Thread.currentThread().getStackTrace());
-				if (mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
-				{
-					if(address.isEmpty())
-					{
-						connectDevice();
-					}
-					else
-					{
-						connectDevice(address);
-					}
-				}
-			}
-		};
-
-		mHandler.postDelayed(mRunnableConnectDevice,delay);
-	}
-
-	private void removeConnectDeviceRunnable()
-	{
-		LogUtil.d(TAG,"Remove reconnect runnable",Thread.currentThread().getStackTrace());
-
-		mHandler.removeCallbacks(mRunnableConnectDevice);
-
-		mRunnableConnectDevice = null;
 	}
 
     /**
@@ -2269,20 +2375,27 @@ public class BluetoothLeIndependentService extends Service
 		}
 	}
 
-	private void handleBleDisconnect()
+	public void handleBleDisconnect()
 	{
 		try
 		{
-			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
 			if(isInProgramMode())
 			{
 				mProgramModeState = OFF;
 				addTaskToQueue(CMD_PROGRAM_INTERFACE,(byte)PARAM_ASK_LEAVE_PROGRAM_INTERFACE,TIMEOUT_PROGRAM_TASK,genProgramData(-1,0,0,0,null));
 			}
 
+			if(mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
+			{
+				return;
+			}
+
+			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+
+			removeBluetoothDeviceFromCache(mBluetoothDevice.getAddress());
 
 			// Clear timer when disconnected, avoid re-connect automatically
-			removeConnectionTimeout(); //handleBleDisconnect
+			removeTaskTimeout(); //handleBleDisconnect
 
 			if(isDeviceInitialized())
 				playDisconnectedSound();
@@ -2296,19 +2409,26 @@ public class BluetoothLeIndependentService extends Service
 			mDeviceInitState = INIT_STATE_NONE;
 
 			// if allowReConnect is false, skip
-			if(mAllowReBind == false)
+			if(!mAutoConnectOnDisconnect || !mAllowReBind)
 			{
 				mHandler.removeCallbacksAndMessages(null);
-				mBluetoothGatt = null;
 				return;
 			}
 
 			mAllowReBind = false;
-			if(mRunnableConnectDevice == null)
+			// Allow to re-connect under limit
+			if(mBluetoothDevice != null && mBindRetry++ < TASK_BIND_RETRY_MAX && isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
 			{
-				setupConnectDeviceRunnable("",3000);
+				mHandler.postDelayed(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						LogUtil.d(TAG,"Re-binding, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
+						_bind(); //handleBleDisconnect
+					}
+				},2000);
 			}
-
 		}
 		catch (Exception e)
 		{
@@ -2348,7 +2468,6 @@ public class BluetoothLeIndependentService extends Service
 						{
 							LogUtil.e(TAG, "[Connection] mBluetoothGatt is null !!!",Thread.currentThread().getStackTrace());
 							appendLog(formatErrorString("mBluetoothGatt is null !!!"));
-							removeConnectionTimeout();
 							disconnect(true); //mBluetoothGatt is null
 						}
 					}
@@ -3650,44 +3769,66 @@ public class BluetoothLeIndependentService extends Service
 
 	public void addConnectedBluetoothDevice(final BluetoothDevice bluetoothDevice)
 	{
-		if(mConnectedDeviceList == null)
-			mConnectedDeviceList = new ArrayList<>();
+		getConnectedDeviceFromProfile(mInputDeviceProfile);
 
 		LogUtil.d(TAG,"addConnectedBluetoothDevice , new device : " + bluetoothDevice.getAddress(),Thread.currentThread().getStackTrace());
 		if(getConnectedBluetoothDevice(bluetoothDevice.getAddress()) == null)
 		{
 			mConnectedDeviceList.add(bluetoothDevice);
+		}
 
-			// No preferred bluetooth
-			if(mBluetoothDevice == null)
+		// No preferred bluetooth, current selected device haven't paired with IvBT
+		if(!isBluetoothAvailable())
+		{
+			return;
+		}
+
+		// Connected device not preferred
+		if(!bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
+		{
+			return;
+		}
+
+		// During bonding process, do not connect , do nothing until bonding finish
+		if((mDeviceInitState == INIT_STATE_BONDING
+				|| mDeviceInitState == INIT_STATE_BOND_TO_CONNECT)
+				&& bluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
+		{
+			LogUtil.d(TAG,String.format("After bonding, state=%d , wait for disconnect ",mDeviceInitState),Thread.currentThread().getStackTrace());
+			return;
+		}
+
+		boolean isBondedDevice = false;
+		final Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+
+		for(BluetoothDevice bondDevice : pairedDevices)
+		{
+			if(bondDevice.getAddress().equals(bluetoothDevice.getAddress()))
 			{
-				LogUtil.d(TAG,"addConnectedBluetoothDevice , current device is null ",Thread.currentThread().getStackTrace());
-				return;
+				isBondedDevice = true;
+				break;
 			}
+		}
 
-			if(bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
+
+		if(isBondedDevice)
+		{
+			LogUtil.d(TAG,"addConnectedBluetoothDevice , start binding after 1500ms",Thread.currentThread().getStackTrace());
+			mBindRetry = 0;
+			mHandler.postDelayed(new Runnable()
 			{
-				// During bonding process, do not connect , do nothing until bonding finish
-				if((mDeviceInitState == INIT_STATE_BONDING
-						|| mDeviceInitState == INIT_STATE_BOND_TO_CONNECT)
-						&& bluetoothDevice.getBondState() != BluetoothDevice.BOND_BONDED)
+				@Override
+				public void run()
 				{
-					LogUtil.d(TAG,"After bonding , wait for disconnect ",Thread.currentThread().getStackTrace());
-					return;
+					_bind(); // AddConnectedBluetoothDevice
 				}
+			},1500);
 
-				// Check if it is a bonded device when we receiving ACL_CONNECTED message
-				// If it is not bonded, it is the first ACL_CONNECTED during bonding or not what we want
-				if(bluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
-				{
-					LogUtil.d(TAG,String.format("mAutoConnectOnDisconnect = %s , mManualConnect = %s",mAutoConnectOnDisconnect,mManualConnect),Thread.currentThread().getStackTrace());
-					if(mDeviceInitState == INIT_STATE_BOND_OK || mManualConnect || mAutoConnectOnDisconnect)
-					{
-						LogUtil.d(TAG,"addConnectedBluetoothDevice , start connect device after 3 seconds",Thread.currentThread().getStackTrace());
-						setupConnectDeviceRunnable(bluetoothDevice.getAddress(),3000);
-					}
-				}
-			}
+			//notifyDeviceListUpdated("connected",mConnectedDeviceList);
+		}
+		else
+		{
+			LogUtil.d(TAG,"Device not bonded, skip",Thread.currentThread().getStackTrace());
 		}
 	}
 
@@ -3726,14 +3867,52 @@ public class BluetoothLeIndependentService extends Service
 			mDeviceInitState = INIT_STATE_BOND_OK;
 			//closeBTConnection(bluetoothDevice.getAddress());
 
-			_connect();
+			_connect(); //removeConnectedBluetoothDevice
 			return;
 		}
 
-		// If autoConnect is enabled or is tuning key less, re-connect it
-		if(mAutoConnectOnDisconnect)
+		if(!mAutoConnectOnDisconnect || !mAllowReBind)
 		{
-			setupConnectDeviceRunnable("",3000);
+			return;
+		}
+
+		// Record time stamp on disconnect, we have a 3 seconds delay then allowed to start connecting
+		mDisconnectTimeStamp = System.currentTimeMillis();
+
+		LogUtil.d(TAG,"Re-Connect",Thread.currentThread().getStackTrace());
+		if(mConnectionState == BluetoothProfile.STATE_DISCONNECTED)
+		{
+			final PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+			boolean isScreenOn = true;
+
+			if(powerManager != null)
+			{
+				isScreenOn = powerManager.isScreenOn();
+			}
+			// If screen is off, request PARTIAL_WAKE_LOCK to keep thread running, and release after 6s
+			if(!isScreenOn && powerManager != null)
+			{
+				final PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WakeForConnect");
+				wakeLock.acquire();
+				_connect(); //removeConnectedBluetoothDevice
+				mHandler.postDelayed(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						wakeLock.release();
+					}
+				},6000);
+			}
+			else
+			{
+				_connect(); //removeConnectedBluetoothDevice
+			}
+		}
+		else
+		{
+			LogUtil.d(TAG,"Gatt is still connected, disconnect first",Thread.currentThread().getStackTrace());
+			disconnect(false);
 		}
 	}
 
@@ -3744,7 +3923,7 @@ public class BluetoothLeIndependentService extends Service
 			for(int i=0;i<mConnectedDeviceList.size();i++)
 			{
 				final BluetoothDevice device = mConnectedDeviceList.get(i);
-				LogUtil.d(TAG,"getConnectedBluetoothDevice , connected device : " + device.getAddress(),Thread.currentThread().getStackTrace());
+				//LogUtil.d(TAG,"getConnectedBluetoothDevice , connected device : " + device.getAddress(),Thread.currentThread().getStackTrace());
 				if(device.getAddress().equals(address))
 				{
 					return device;

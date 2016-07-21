@@ -28,13 +28,15 @@ public class BluetoothReceiver extends BroadcastReceiver
 {
     private final String TAG = "BluetoothReceiver";
     private Handler mHandler = new Handler();
-    private static Runnable mRunnablePostPoneConnect = null;
-    private static Runnable mRunnablePostPoneDisconnect = null;
+    private BluetoothLeIndependentService mService = null;
+
+    private Runnable mThreadRunnable = null;
+    private static Thread mThread = null;
 
     @Override
     public void onReceive(final Context context, final Intent intent)
     {
-        LogUtil.d("BluetoothReceiver",intent.getAction(), Thread.currentThread().getStackTrace());
+        LogUtil.d(TAG,intent.getAction(), Thread.currentThread().getStackTrace());
 
         // If not support BLE, do nothing
         if(!isSupportBLE(context))
@@ -42,7 +44,15 @@ public class BluetoothReceiver extends BroadcastReceiver
             return;
         }
 
+        mService = getIvLinkService(context);
+        if(mService == null)
+        {
+            LogUtil.d(TAG,"Can't get BluetoothService", Thread.currentThread().getStackTrace());
+            return;
+        }
+
         final String action = intent.getAction();
+        // Bluetooth state change
         if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED))
         {
             final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
@@ -56,51 +66,24 @@ public class BluetoothReceiver extends BroadcastReceiver
                 break;
                 case BluetoothAdapter.STATE_TURNING_OFF:
                 {
-                    if(isServiceRunning(context,BluetoothLeIndependentService.class))
-                    {
-                        final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-                        if(service != null)
-                        {
-                            service.clearConnectedBluetoothDevice();
-                        }
-                    }
+                    mService.clearCachedBluetoothDevice();
+
+                    mService.clearConnectedBluetoothDevice();
+
+                    mService.initStopScan();
+
+                    mService.handleBleDisconnect();
                 }
                 break;
                 case BluetoothAdapter.STATE_ON:
                 {
-                    BluetoothLeIndependentService service = null;
-
                     if(isServiceRunning(context,BluetoothLeIndependentService.class) == false)
                     {
-                        LogUtil.d("BluetoothReceiver","startService", Thread.currentThread().getStackTrace());
+                        LogUtil.d(TAG,"start Service",Thread.currentThread().getStackTrace());
                         startService(context);
                     }
 
-                    service = BluetoothLeIndependentService.getInstance();
-
-                    if(service != null)
-                    {
-                        handleBluetoothTurnOn(service);
-                    }
-                    else
-                    {
-                        mHandler.postDelayed(new Runnable()
-                        {
-                            @Override
-                            public void run()
-                            {
-                                final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-                                if(service != null)
-                                {
-                                    handleBluetoothTurnOn(service);
-                                }
-                                else
-                                {
-                                    LogUtil.d(TAG,"BluetoothLeIndependentService not running", Thread.currentThread().getStackTrace());
-                                }
-                            }
-                        },1000);
-                    }
+                    handleBluetoothTurnOn();
                 }
                 break;
                 case BluetoothAdapter.STATE_TURNING_ON:
@@ -118,41 +101,17 @@ public class BluetoothReceiver extends BroadcastReceiver
 
             if(deviceName.equals(BluetoothLeIndependentService.KEYWORD_SLBLE))
             {
-                int delayTimer = 0;
-                int tryStartService = 0;
-                while(!isServiceRunning(context,BluetoothLeIndependentService.class) && tryStartService<2)
-                {
-                    startService(context);
-                    delayTimer = 600;
-                    tryStartService++;
-                }
-
-
-                if(isServiceRunning(context,BluetoothLeIndependentService.class))
-                {
-                    mHandler.postDelayed(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            handleBluetoothAclEvent(context,intent.getAction(),bluetoothDevice);
-                        }
-                    },delayTimer);
-                }
-                else
-                {
-                    LogUtil.d(TAG,"Can not start BluetoothLeIndependentService!!", Thread.currentThread().getStackTrace());
-                }
+                handleBluetoothAclEvent(context,intent.getAction(),bluetoothDevice);
             }
         }
     }
 
-    private void handleBluetoothTurnOn(final BluetoothLeIndependentService service)
+    private void handleBluetoothTurnOn()
     {
         try
         {
             // Do something when Bluetooth turned on
-            service.reInitialize();
+            mService.reInitialize();
         }
         catch (Exception e)
         {
@@ -163,63 +122,52 @@ public class BluetoothReceiver extends BroadcastReceiver
     synchronized private void handleBluetoothAclEvent(final Context context, final String action, final BluetoothDevice bluetoothDevice)
     {
         LogUtil.d(TAG,"handleBluetoothAclEvent = " + action, Thread.currentThread().getStackTrace());
-        final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
-        if(service == null)
-            return;
+
         switch (action)
         {
             case BluetoothDevice.ACTION_ACL_CONNECTED:
             {
-                removeCallbacks();
-
-                mRunnablePostPoneConnect = new Runnable()
+                mThreadRunnable = new Runnable()
                 {
                     @Override
                     public void run()
                     {
-                        mRunnablePostPoneConnect = null;
-                        service.addConnectedBluetoothDevice(bluetoothDevice);
+                        mService.addConnectedBluetoothDevice(bluetoothDevice);
                     }
                 };
-
-                mHandler.postDelayed(mRunnablePostPoneConnect,0);
+                setThread(mThreadRunnable);
+                mThread.start();
             }
             break;
 
             case BluetoothDevice.ACTION_ACL_DISCONNECTED:
             {
-                removeCallbacks();
-
-                mRunnablePostPoneDisconnect = new Runnable()
+                mThreadRunnable = new Runnable()
                 {
                     @Override
                     public void run()
                     {
-                        mRunnablePostPoneDisconnect = null;
-                        if(isServiceRunning(context,BluetoothLeIndependentService.class) )
-                        {
-                            service.removeConnectedBluetoothDevice(bluetoothDevice);
-                        }
+                        mService.removeConnectedBluetoothDevice(bluetoothDevice);
                     }
                 };
-                mHandler.postDelayed(mRunnablePostPoneDisconnect,0);
+                setThread(mThreadRunnable);
+                mThread.start();
             }
             break;
         }
     }
 
-    private void removeCallbacks()
+    private void setThread(final Runnable runnable)
     {
-        if(mRunnablePostPoneConnect != null)
+        if(mThread != null)
         {
-            mHandler.removeCallbacks(mRunnablePostPoneConnect);
-            mRunnablePostPoneConnect = null;
+            mThread.interrupt();
+            mThread = null;
         }
 
-        if(mRunnablePostPoneDisconnect != null)
+        if(runnable != null)
         {
-            mHandler.removeCallbacks(mRunnablePostPoneDisconnect);
-            mRunnablePostPoneDisconnect = null;
+            mThread = new Thread(runnable);
         }
     }
 
@@ -246,6 +194,21 @@ public class BluetoothReceiver extends BroadcastReceiver
             // Support BLE function
             return true;
         }
+    }
+
+    private BluetoothLeIndependentService getIvLinkService(final Context context)
+    {
+        if(!isServiceRunning(context,BluetoothLeIndependentService.class))
+        {
+            startService(context);
+        }
+
+        if(mService == null)
+        {
+            mService = BluetoothLeIndependentService.getInstance();
+        }
+
+        return mService;
     }
 
     private void startService(final Context context)
