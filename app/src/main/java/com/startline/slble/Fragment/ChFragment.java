@@ -16,6 +16,7 @@ import com.startline.slble.Interface.OnProgramDataChangedListener;
 import com.startline.slble.Interface.ProgramTool;
 import com.startline.slble.R;
 import com.startline.slble.Util.DialogUtil;
+import com.startline.slble.Util.LogUtil;
 
 import static com.startline.slble.Interface.ProgramTool.*;
 
@@ -93,7 +94,14 @@ public class ChFragment extends BaseFragment
             final String text = editable.toString();
             if(text.length() > 0)
             {
-                time = Integer.parseInt(text);
+                try
+                {
+                    time = Integer.parseInt(text);
+                }
+                catch (Exception e)
+                {
+                    LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
+                }
             }
             switch(view.getId())
             {
@@ -556,14 +564,13 @@ public class ChFragment extends BaseFragment
 
         spinnerFunction.setSelection(mModifiedData[CH_ITEM_FUNCTION]);
 
-        editT1.setText(String.valueOf(mModifiedData[CH_ITEM_T1+1]*256 + mModifiedData[CH_ITEM_T1]));
-        editT2.setText(String.valueOf(mModifiedData[CH_ITEM_T2+1]*256 + mModifiedData[CH_ITEM_T2]));
-        editT3.setText(String.valueOf(mModifiedData[CH_ITEM_T3+1]*256 + mModifiedData[CH_ITEM_T3]));
-        editT4.setText(String.valueOf(mModifiedData[CH_ITEM_T4+1]*256 + mModifiedData[CH_ITEM_T4]));
+        editT1.setText(String.valueOf((mModifiedData[CH_ITEM_T1+1] & 0xFF)*256 + (mModifiedData[CH_ITEM_T1] & 0xFF)));
+        editT2.setText(String.valueOf((mModifiedData[CH_ITEM_T2+1] & 0xFF)*256 + (mModifiedData[CH_ITEM_T2] & 0xFF)));
+        editT3.setText(String.valueOf((mModifiedData[CH_ITEM_T3+1] & 0xFF)*256 + (mModifiedData[CH_ITEM_T3] & 0xFF)));
+        editT4.setText(String.valueOf((mModifiedData[CH_ITEM_T4+1] & 0xFF)*256 + (mModifiedData[CH_ITEM_T4] & 0xFF)));
 
-        spinnerEventOn.setSelection(mModifiedData[CH_ITEM_EVENT_ON]);
-
-        spinnerEventOff.setSelection(mModifiedData[CH_ITEM_EVENT_OFF]);
+        spinnerEventOn.setSelection(mModifiedData[CH_ITEM_EVENT_ON] < 0 ? 0 : mModifiedData[CH_ITEM_EVENT_ON] > spinnerEventOn.getAdapter().getCount()? spinnerEventOn.getAdapter().getCount()-1: mModifiedData[CH_ITEM_EVENT_ON]);
+        spinnerEventOff.setSelection(mModifiedData[CH_ITEM_EVENT_OFF] < 0 ? 0 : mModifiedData[CH_ITEM_EVENT_OFF] > spinnerEventOff.getAdapter().getCount()? spinnerEventOff.getAdapter().getCount()-1: mModifiedData[CH_ITEM_EVENT_OFF]);
 
         checkPBrake.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x08) > 0);
         checkTrunk.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x04) > 0);
