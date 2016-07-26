@@ -14,15 +14,18 @@ import android.util.Log;
 import android.view.View;
 import android.widget.*;
 import com.startline.slble.Adapter.BleSerializableDeviceAdapter;
+import com.startline.slble.BuildConfig;
 import com.startline.slble.PureClass.Constants;
 import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 
 import com.startline.slble.PureClass.BleSerializableDevice;
 import com.startline.slble.Util.LogUtil;
+import com.startline.slble.Util.TimeUtil;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Set;
 import static com.startline.slble.Service.BluetoothLeIndependentService.*;
 
@@ -55,6 +58,7 @@ public class DeviceListActivity extends Activity
 	private TextView txtAdvData = null;
 	private Button btnScan = null;
 	private Button btnStop = null;
+	private TextView txtVersion = null;
 	private ListView listViewScan = null;
 	private ListView listViewBond = null;
 	private LinearLayout layoutProgress = null;
@@ -388,6 +392,28 @@ public class DeviceListActivity extends Activity
 					//progressDialog.dismiss();
 				}
 			});
+
+			final String buildTime = TimeUtil.formatDate(new Date(BuildConfig.TIMESTAMP), TimeUtil.FORMAT_BUILD_TIME);
+			txtVersion = (TextView)findViewById(R.id.txt_version);
+			txtVersion.setText(buildTime + " - " + BuildConfig.GITHASH);
+			findViewById(R.id.layout_version).setOnLongClickListener(new View.OnLongClickListener()
+			{
+				@Override
+				public boolean onLongClick(View v)
+				{
+					if(txtVersion.getVisibility() == View.GONE)
+					{
+						txtVersion.setVisibility(View.VISIBLE);
+					}
+					else
+					{
+						txtVersion.setVisibility(View.GONE);
+					}
+					return true;
+				}
+			});
+
+
 
 			txtAdvData = (TextView)findViewById(R.id.txt_adv_data);
 		}

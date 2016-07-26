@@ -146,6 +146,7 @@ public class BluetoothLeIndependentService extends Service
 	public static final int INIT_STATE_INFORMATION = 5;
 	public static final int INIT_STATE_CSTA = 6;
 	public static final int INIT_STATE_END = 7;
+	public static final int INIT_STATE_TEST = 100;
 
 	//-------------------------------------------------------------------
 	// Keyless
@@ -218,6 +219,7 @@ public class BluetoothLeIndependentService extends Service
 	// App Setting
 	private boolean mAutoConnectOnDisconnect = false;
 	private boolean mAutoScroll = false;
+	private boolean mAutoTest = false;
 
 	// Ble Setting
 	private int mobileNumber = 0;
@@ -722,6 +724,13 @@ public class BluetoothLeIndependentService extends Service
 							return;
 						}
 
+						if(mAutoTest)
+						{
+							LogUtil.d(TAG,gatt.getDevice().getAddress(),Thread.currentThread().getStackTrace());
+							sendDebugCommand(1);
+							return;
+						}
+
 						appendLog(formatConnectionString("Get device name"));
 
 						mDeviceInitState = INIT_STATE_DEVICE_NAME;
@@ -757,6 +766,7 @@ public class BluetoothLeIndependentService extends Service
 			}
 
 			LogUtil.d(TAG, "[Process] onCharacteristicChanged",Thread.currentThread().getStackTrace());
+
 			try
 			{
 				mReceivedData = characteristic.getValue();
@@ -1199,6 +1209,16 @@ public class BluetoothLeIndependentService extends Service
 		mAutoScroll = enable;
 	}
 
+	public boolean getAutoTest()
+	{
+		return mAutoTest;
+	}
+
+	public void setAutoTest(final boolean enable)
+	{
+		mAutoTest = enable;
+	}
+
 	public boolean getAutoScroll()
 	{
 		return mAutoScroll;
@@ -1296,6 +1316,7 @@ public class BluetoothLeIndependentService extends Service
 		{
 			setAutoConnectOnDisconnect(false);
 			setAutoScroll(false);
+			setAutoTest(false);
 		}
 		else
 		{
@@ -1304,6 +1325,7 @@ public class BluetoothLeIndependentService extends Service
 				JSONObject jsonObject = new JSONObject(appSetting);
 				setAutoConnectOnDisconnect(jsonObject.get(getString(R.string.title_auto_connect)) == 1);
 				setAutoScroll(jsonObject.get(getString(R.string.title_auto_scroll)) == 1);
+				setAutoTest(jsonObject.get(getString(R.string.title_auto_send_test)) == 1);
 			}
 			catch (Exception e)
 			{
@@ -2548,6 +2570,27 @@ public class BluetoothLeIndependentService extends Service
 		try
 		{
 			appendLog(formatByteArrayToLog(receiveData));
+
+			if(mAutoTest)
+			{
+				if(mReceivedData[FIELD_COMMAND] == CMD_BLE_DEBUG && mReceivedData[FIELD_PARAMETER] == 0x0)
+				{
+					// Must remove timeout task to avoid auto disconnect
+					removeTaskTimeout(); // Remove connect timeout runnable
+
+					// Notify to update UI
+					broadcastNotifyUi(getProcessStepIntent(INIT_STATE_TEST));
+
+					mDeviceInitState = INIT_STATE_END;
+					mManualConnect = false;
+
+					// After connecting and verified, add device to cache list
+					addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
+					return;
+				}
+			}
+
+
 			// If check sum is incorrect , restart the process flow from ready
 			if(isCheckSumOk(receiveData) == false)
 			{
@@ -2865,6 +2908,37 @@ public class BluetoothLeIndependentService extends Service
 			final byte[] writeData = new byte[PACKET_LENGTH];
 			writeData[FIELD_ID] = getRandom(255);
 			writeData[FIELD_COMMAND] = CMD_PHONE_CONTROL_COMMAND;
+			writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
+
+			final byte[] data = generateRandomArray(16,1);
+			data[0] = (byte)cmd;
+			fillData(writeData,data);
+
+			// fill check sum
+			writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
+
+
+			final String s = formatByteArrayToLog(writeData);
+			LogUtil.d(TAG, "[Process] Send Cmd  : " + s,Thread.currentThread().getStackTrace());
+			appendLog(formatSendString("Send Cmd  : " + String.format("0x%02X", cmd)));
+
+			sendPlainData(writeData);
+		}
+		catch (Exception e)
+		{
+			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
+		}
+	}
+
+	public void sendDebugCommand(final int cmd)
+	{
+		try
+		{
+//            if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+			final byte[] writeData = new byte[PACKET_LENGTH];
+			writeData[FIELD_ID] = getRandom(255);
+			writeData[FIELD_COMMAND] = CMD_BLE_DEBUG;
 			writeData[FIELD_PARAMETER] = (byte)PARAM_NONE;
 
 			final byte[] data = generateRandomArray(16,1);
@@ -4125,6 +4199,7 @@ public class BluetoothLeIndependentService extends Service
 		{
 			jsonObject.put(getString(R.string.title_auto_connect),mAutoConnectOnDisconnect?1:0);
 			jsonObject.put(getString(R.string.title_auto_scroll),mAutoScroll?1:0);
+			jsonObject.put(getString(R.string.title_auto_send_test),mAutoTest?1:0);
 		}
 		catch (Exception e)
 		{

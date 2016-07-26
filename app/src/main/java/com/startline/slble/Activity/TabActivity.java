@@ -224,6 +224,13 @@ public class TabActivity extends FragmentActivity
 								}
 							}
 							break;
+
+							case INIT_STATE_TEST:
+							{
+								updateConnectionStatusIcon(true,true);
+								displayDeviceMessage("Test success");
+							}
+							break;
 						}
 					}
 					break;

@@ -39,6 +39,7 @@
     <string name = "title_mobile_number">Mobile number</string>
     <string name = "title_auto_connect">Auto connect</string>
     <string name = "title_auto_scroll">Auto scroll</string>
+    <string name = "title_auto_send_test">Auto Test</string>
     <string name = "title_tx_power">TX Power</string>
     <string name = "title_tx_power_normal">Normal</string>
     <string name = "title_tx_power_keyless_lock">Keyless Lock</string>
@@ -49,6 +50,7 @@
     <string name = "description_mobile_number">Number of phones which are bonded to device</string>
     <string name = "description_auto_connect">Auto re-connect when device is disconnected</string>
     <string name = "description_auto_scroll">Auto scroll down to the newest log message</string>
+    <string name = "description_send_test">Auto send TEST command after connecting</string>
     <string name = "description_tx_power"></string>
     <string name = "description_tx_power_normal">TX Power level</string>
     <string name = "description_tx_power_keyless_lock">TX Power level for keyless lock</string>

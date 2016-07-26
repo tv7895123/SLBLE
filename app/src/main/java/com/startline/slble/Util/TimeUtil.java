@@ -28,6 +28,7 @@ public class TimeUtil
     public final static String FORMAT_YYYY_MM_dd_HH_mm = "yyyy-MM-dd HH:mm";
 	public final static String FORMAT_YYYY_MM_dd = "yyyy-MM-dd";
     public final static String FORMAT_HH_mm = "HH:mm";
+    public final static String FORMAT_BUILD_TIME = "yyyyMMddHHmm";
 
 
 
@@ -148,6 +149,12 @@ public class TimeUtil
         }
     }
 
+    public static String formatDate(final Date date,final String format)
+    {
+        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
+        final String newDate = simpleDateFormat.format(date);
+        return newDate;
+    }
 
 	// Convert from UTC time to local time
     public static String convertToLocalTime(final String utcTime)
