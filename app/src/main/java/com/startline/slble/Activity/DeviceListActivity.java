@@ -10,6 +10,8 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
+import android.text.Spanned;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
@@ -24,8 +26,10 @@ import com.startline.slble.Util.LogUtil;
 import com.startline.slble.Util.TimeUtil;
 
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Set;
 import static com.startline.slble.Service.BluetoothLeIndependentService.*;
 
@@ -39,10 +43,12 @@ public class DeviceListActivity extends Activity
 	private static final int REQUEST_ENABLE_BT = 1;
 	public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
+	private final int TEST_MODE_RSSI_THRESHOLD = -45;
     //*****************************************************************//
     //  Global Variables                                               //
     //*****************************************************************//
 	private boolean mIsScanning = false;
+	private boolean mTestMode = false;
 
     //*****************************************************************//
     //  Object                                                         //
@@ -51,17 +57,23 @@ public class DeviceListActivity extends Activity
 	private BluetoothAdapter mBluetoothAdapter;
 	private BleSerializableDeviceAdapter mLeDeviceListAdapter;
 	private BleSerializableDeviceAdapter mBondDeviceListAdapter;
+	private BluetoothLeIndependentService mService = null;
 
     //*****************************************************************//
     //  View                                                           //
     //*****************************************************************//
-	private TextView txtAdvData = null;
 	private Button btnScan = null;
 	private Button btnStop = null;
+	private Button btnTerminateTestMode = null;
+	private CheckBox cbTestMode = null;
+	private TextView txtAdvData = null;
 	private TextView txtVersion = null;
+	private TextView txtTestModeMessage = null;
 	private ListView listViewScan = null;
 	private ListView listViewBond = null;
 	private LinearLayout layoutProgress = null;
+	private RelativeLayout layoutBond = null;
+	private RelativeLayout layoutTestModeMesage = null;
 	//private ProgressDialog progressDialog = null;
 
 
@@ -75,6 +87,21 @@ public class DeviceListActivity extends Activity
 				final ArrayList<BleSerializableDevice> deviceList = (ArrayList<BleSerializableDevice>)msg.obj;
 				mLeDeviceListAdapter.setDevice(deviceList);
 				mLeDeviceListAdapter.notifyDataSetChanged();
+				if(mTestMode && mService != null && mBluetoothAdapter != null)
+				{
+					for(int i=0;i<deviceList.size();i++)
+					{
+						final BleSerializableDevice device  = deviceList.get(i);
+						final BluetoothDevice bluetoothDevice = mBluetoothAdapter.getRemoteDevice(device.address);
+
+						if(device.rssi > TEST_MODE_RSSI_THRESHOLD && bluetoothDevice.getBondState() == BluetoothDevice.BOND_NONE)
+						{
+							btnStop.performClick();
+							mService.bondingDevice(device.address);
+							break;
+						}
+					}
+				}
 			}
 		}
 	};
@@ -108,6 +135,72 @@ public class DeviceListActivity extends Activity
 					}
 				}
             }
+		}
+	};
+
+
+	// Receive message from BluetoothIndependentService
+	private final BroadcastReceiver mNotifyMessageReceiver = new BroadcastReceiver()
+	{
+		@Override
+		public void onReceive(Context context, Intent intent)
+		{
+			final String action = intent.getAction();
+			final int param = intent.getIntExtra("param",-1);
+			if(action.equals(ACTION_SERVICE_NOTIFY_UI))
+			{
+				switch (param)
+				{
+					case PARAM_CONNECT_STATUS:
+					{
+						int stringId = 0;
+						switch (intent.getIntExtra("connectionStatus",0))
+						{
+							case CONNECTION_STATE_BONDING:
+								stringId = R.string.bonding;
+								break;
+							case CONNECTION_STATE_BINDING:
+								stringId = R.string.binding;
+								break;
+							case CONNECTION_STATE_CONNECTING:
+								stringId = R.string.connecting;
+								break;
+							case CONNECTION_STATE_BOND_FAILED:
+								stringId = R.string.bond_failed;
+								break;
+							case CONNECTION_STATE_BOND_SUCCESS:
+								stringId = R.string.bond_success;
+								break;
+						}
+
+						if(stringId > 0)
+						{
+							appendTestModeMessage(getString(stringId));
+						}
+					}
+					break;
+
+					case PARAM_PROCESS_STEP:
+					{
+						final int step = intent.getIntExtra("step",-1);
+						switch (step)
+						{
+							case INIT_STATE_SEND_TEST_COMMAND:
+							{
+								appendTestModeMessage("Send test command");
+							}
+							break;
+
+							case INIT_STATE_TEST_SUCCESS:
+							{
+								appendTestModeMessage("Test success");
+							}
+							break;
+						}
+					}
+					break;
+				}
+			}
 		}
 	};
 
@@ -174,6 +267,7 @@ public class DeviceListActivity extends Activity
 				final BluetoothLeIndependentService service = BluetoothLeIndependentService.getInstance();
 				if(service != null)
 				{
+					mService = service;
 					service.setIpcCallbackhandler(mHandler);
 				}
 			}
@@ -284,6 +378,12 @@ public class DeviceListActivity extends Activity
 	protected void onDestroy()
 	{
 		super.onDestroy();
+
+		if(mTestMode)
+		{
+			unregisterReceiver(mNotifyMessageReceiver);
+		}
+
 //		if(isServiceRunning(BluetoothLeIndependentService.class) == true)
 //		{
 //			stopBluetoothLeService();
@@ -325,6 +425,39 @@ public class DeviceListActivity extends Activity
 		try
 		{
 			layoutProgress = (LinearLayout)findViewById(R.id.layout_progress);
+			layoutTestModeMesage = (RelativeLayout) findViewById(R.id.layout_test_mode_message);
+
+			cbTestMode = (CheckBox)findViewById(R.id.cb_test_mode);
+			cbTestMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+			{
+				@Override
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+				{
+					mTestMode = isChecked;
+					if(isChecked)
+					{
+						registerReceiver(mNotifyMessageReceiver, makeIntentFilter());
+						layoutTestModeMesage.setVisibility(View.VISIBLE);
+					}
+					else
+					{
+						unregisterReceiver(mNotifyMessageReceiver);
+						layoutTestModeMesage.setVisibility(View.GONE);
+						if(mService != null)
+						{
+							mService.terminateTestModeConnection();
+						}
+						updateBondedListAdapter();
+					}
+
+					if(mService != null)
+					{
+						mService.setAutoTest(mTestMode);
+					}
+				}
+			});
+
+			txtTestModeMessage = (TextView)findViewById(R.id.txt_test_mode_message);
 
 			listViewScan = (ListView)findViewById(R.id.listview_scan);
 			listViewScan.setOnItemClickListener(new AdapterView.OnItemClickListener()
@@ -374,10 +507,36 @@ public class DeviceListActivity extends Activity
 				@Override
 				public void onClick(View v)
 				{
+					if(mTestMode)
+					{
+						if(mService != null)
+						{
+							appendTestModeMessage("Terminate Test Mode");
+
+							int delay = mService.terminateTestModeConnection();
+							unBondAllDevice(delay);
+						}
+
+						txtTestModeMessage.setText("");
+					}
+
 					mLeDeviceListAdapter.clear();
                     sendUiActionBroadcast(notifyStartScanDevice());
 					layoutProgress.setVisibility(View.VISIBLE);
 					//progressDialog.show();
+				}
+			});
+
+			btnTerminateTestMode = (Button)findViewById(R.id.btn_terminate_test_mode);
+			btnTerminateTestMode.setOnClickListener(new View.OnClickListener()
+			{
+				@Override
+				public void onClick(View v)
+				{
+					if(mTestMode && mService != null)
+					{
+						mService.terminateTestModeConnection();
+					}
 				}
 			});
 
@@ -466,6 +625,35 @@ public class DeviceListActivity extends Activity
 		startActivity(intent);
 	}
 
+	private void unBondAllDevice(final int delayTime)
+	{
+		new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					Thread.sleep(delayTime);
+
+					final Set<BluetoothDevice> deviceSet = getBondedDevice();
+
+					// Get selected device
+					for (BluetoothDevice dev : deviceSet)
+					{
+						unBondDevice(dev);
+						Thread.sleep(300);
+					}
+					Thread.sleep(200);
+				}
+				catch (Exception e)
+				{
+
+				}
+			}
+		}).start();
+	}
+
 	private void unBondDevice(final BluetoothDevice device)
 	{
 		try
@@ -477,6 +665,15 @@ public class DeviceListActivity extends Activity
 		{
 			Log.e(TAG, e.getMessage());
 		}
+	}
+
+	private void appendTestModeMessage(final String message)
+	{
+		final Date date = new Date();
+		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm:ss.sss", Locale.ENGLISH);
+		final String time = String.format("[ %s ]",simpleDateFormat.format(date));
+		final Spanned text = Html.fromHtml(time + "  " + message + "<BR/>");
+		txtTestModeMessage.append(text);
 	}
 
 	private void sendUiActionBroadcast(final Intent intent)
@@ -525,6 +722,14 @@ public class DeviceListActivity extends Activity
 		final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     	final Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
 		return pairedDevices;
+	}
+
+	private static IntentFilter makeIntentFilter()
+	{
+		final IntentFilter intentFilter = new IntentFilter();
+		intentFilter.addAction(ACTION_SERVICE_NOTIFY_UI);
+		//intentFilter.addAction(ACTION_DEBUG_SERVICE_TO_UI);
+		return intentFilter;
 	}
 
 	protected boolean isServiceRunning(final Class serviceClass)

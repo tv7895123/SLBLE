@@ -210,7 +210,7 @@ public class SettingListActivity extends Activity
 			R.string.title_mobile_number
 			,R.string.title_auto_connect
 			,R.string.title_auto_scroll
-			,R.string.title_auto_send_test
+			//,R.string.title_auto_send_test
 			,R.string.title_tx_power
 			//,R.string.title_tx_power_normal
 			,R.string.title_tx_power_keyless_lock
@@ -224,7 +224,7 @@ public class SettingListActivity extends Activity
 			R.string.description_mobile_number
 			,R.string.description_auto_connect
 			,R.string.description_auto_scroll
-			,R.string.description_send_test
+			//,R.string.description_send_test
 			,R.string.description_tx_power
 			//,R.string.description_tx_power_normal
 			,R.string.description_tx_power_keyless_lock
@@ -337,7 +337,7 @@ public class SettingListActivity extends Activity
 		mTypeList.add(TYPE_TEXT);			// Mobile
 		mTypeList.add(TYPE_CHECKBOX);		// Auto Connect
 		mTypeList.add(TYPE_CHECKBOX);		// Auto Scroll
-		mTypeList.add(TYPE_CHECKBOX);		// Auto Test
+		//mTypeList.add(TYPE_CHECKBOX);		// Auto Test
 		mTypeList.add(TYPE_GROUP);			// Tx Power
 		//mTypeList.add(TYPE_TEXT);			// Normal
 		mTypeList.add(TYPE_TEXT);			// Keyless Lock
@@ -368,7 +368,7 @@ public class SettingListActivity extends Activity
 					break;
 					case 1:	// Auto Connect
 					case 2:	// Auto scroll
-					case 3: // Auto Test
+					//case 3: // Auto Test
 					{
 						int value = 0;
 						if(!appSetting.isEmpty())
@@ -380,7 +380,7 @@ public class SettingListActivity extends Activity
 						map.put("value",value);
 					}
 					break;
-					case 4: // TX Power Group
+					case 3: // TX Power Group
 					{
 //						if(service != null && service.isDeviceInitialized())
 //						{
@@ -412,14 +412,14 @@ public class SettingListActivity extends Activity
 //						}
 //					}
 //					break;
-					case 5:	// Keyless Lock
+					case 4:	// Keyless Lock
 					{
 						int level = (int)modifiedSetting[1] & 0x0F;
 						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
 						map.put("value",KEYLESS_LEVEL[level]);
 					}
 					break;
-					case 6:	// Keyless Unlock
+					case 5:	// Keyless Unlock
 					{
 						int level = (int)((modifiedSetting[1]>>4) & 0x0F);
 						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
@@ -431,7 +431,7 @@ public class SettingListActivity extends Activity
 //						map.put("value","");
 //					}
 //					break;
-					case 7:	// Counter
+					case 6:	// Counter
 					{
 						final int level = (modifiedSetting[2] & 0x0F)> 0 ?1:0;
 						map.put("value",SLAVE_TAG[level]);

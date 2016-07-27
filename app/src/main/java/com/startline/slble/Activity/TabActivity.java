@@ -165,14 +165,6 @@ public class TabActivity extends FragmentActivity
 								stringId = R.string.connecting;
 								updateConnectionStatusIcon(true,false);
 								break;
-							case CONNECTION_STATE_AUTO_CONNECTING:
-								stringId = R.string.auto_connecting;
-								updateConnectionStatusIcon(true,false);
-								break;
-							case CONNECTION_STATE_RE_CONNECTING:
-								stringId = R.string.re_connecting;
-								updateConnectionStatusIcon(true,false);
-								break;
 							case CONNECTION_STATE_CANCEL:
 								stringId = R.string.connect_cancelled;
 								updateConnectionStatusIcon(false,false);
@@ -225,7 +217,7 @@ public class TabActivity extends FragmentActivity
 							}
 							break;
 
-							case INIT_STATE_TEST:
+							case INIT_STATE_TEST_SUCCESS:
 							{
 								updateConnectionStatusIcon(true,true);
 								displayDeviceMessage("Test success");
@@ -373,17 +365,23 @@ public class TabActivity extends FragmentActivity
 		super.onDestroy();
 		unregisterReceiver(mNotifyMessageReceiver);
 
-		// If doesn't support multi-device connection, need to disconnect when activity destroy
-		if(SUPPORT_MULTI_DEVICE == false)
+		if(mBluetoothLeService!= null)
 		{
-			mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
-			mBluetoothLeService.disconnect(false);
-			mBluetoothLeService = null;
+			mBluetoothLeService.stopConnectThread();
+
+			// If doesn't support multi-device connection, need to disconnect when activity destroy
+			if(SUPPORT_MULTI_DEVICE == false)
+			{
+				mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
+				mBluetoothLeService.disconnect(false);
+				mBluetoothLeService = null;
+			}
+			else
+			{
+				mBluetoothLeService.setupBluetoothDeviceFromCache("");
+			}
 		}
-		else
-		{
-			mBluetoothLeService.setupBluetoothDeviceFromCache("");
-		}
+
 		//unbindService(mServiceConnection);
 		//stopService(new Intent().setClass(this,BluetoothLeIndependentService.class));
 	}

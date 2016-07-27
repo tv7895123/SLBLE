@@ -1,6 +1,7 @@
 package com.startline.slble.Fragment;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothProfile;
 import android.content.*;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
@@ -45,7 +46,7 @@ public class DeviceConnectFragment extends Fragment
     //*****************************************************************//
     private String mDeviceName;
     private String mDeviceAddress;
-	private boolean mConnected;
+	private int mConnected = BluetoothProfile.STATE_DISCONNECTED;
 
 
     //*****************************************************************//
@@ -144,16 +145,16 @@ public class DeviceConnectFragment extends Fragment
 			@Override
 			public void onClick(View view)
 			{
-				if (mConnected)
+				if (mConnected == BluetoothProfile.STATE_DISCONNECTED)
 				{
-//					final ImageView imgArmLock = (ImageView) findViewById(R.id.img_arm_lock);
-//					imgArmLock.setImageResource(R.drawable.gray_lock);
-
-					sendAction(getUiActionIntent(BluetoothLeIndependentService.MODE_DISCONNECT));
+					sendAction(getUiActionIntent(BluetoothLeIndependentService.MODE_CONNECT));
 				}
 				else
 				{
-					sendAction(getUiActionIntent(BluetoothLeIndependentService.MODE_CONNECT));
+					//					final ImageView imgArmLock = (ImageView) findViewById(R.id.img_arm_lock);
+//					imgArmLock.setImageResource(R.drawable.gray_lock);
+
+					sendAction(getUiActionIntent(BluetoothLeIndependentService.MODE_DISCONNECT));
 				}
 			}
 		});
@@ -242,8 +243,8 @@ public class DeviceConnectFragment extends Fragment
 	//==============================================================================
 	public void setConnected(final boolean connected)
 	{
-		mConnected = connected;
-		btnThermalReset.setEnabled(!mConnected);
+		mConnected = connected?BluetoothProfile.STATE_CONNECTED:BluetoothProfile.STATE_DISCONNECTED;
+		btnThermalReset.setEnabled(!connected);
 	}
 
 	public void showTxPower(final boolean visible)
@@ -311,13 +312,13 @@ public class DeviceConnectFragment extends Fragment
 
 	public void updateActionBarMenu()
 	{
-		if(mConnected)
+		if(mConnected == BluetoothProfile.STATE_DISCONNECTED)
 		{
-			mBtnConnect.setText("disconnect");
+			mBtnConnect.setText("connect");
 		}
 		else
 		{
-			mBtnConnect.setText("connect");
+			mBtnConnect.setText("disconnect");
 		}
 	}
 
