@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.*;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -476,6 +477,12 @@ public class DeviceListActivity extends Activity
 						return;
 					}
 
+					if(mTestMode)
+					{
+						mService.bondingDevice(device.address);
+						return;
+					}
+
 					startDeviceConnectActivity(device.name,device.address);
 				}
 			});
@@ -511,19 +518,42 @@ public class DeviceListActivity extends Activity
 					{
 						if(mService != null)
 						{
-							appendTestModeMessage("Terminate Test Mode");
+							new AsyncTask<Void, Void, Void>()
+							{
+								@Override
+								protected void onPreExecute()
+								{
+									appendTestModeMessage("Terminate Test Mode");
+								}
 
-							int delay = mService.terminateTestModeConnection();
-							unBondAllDevice(delay);
+								@Override
+								protected Void doInBackground(Void... params)
+								{
+									int delay = mService.terminateTestModeConnection();
+									unBondAllDevice(delay);
+
+									return null;
+								}
+
+								@Override
+								protected void onPostExecute(Void aVoid)
+								{
+									txtTestModeMessage.setText("");
+
+									mLeDeviceListAdapter.clear();
+									sendUiActionBroadcast(notifyStartScanDevice());
+									layoutProgress.setVisibility(View.VISIBLE);
+								}
+							}.execute();
 						}
-
-						txtTestModeMessage.setText("");
 					}
-
-					mLeDeviceListAdapter.clear();
-                    sendUiActionBroadcast(notifyStartScanDevice());
-					layoutProgress.setVisibility(View.VISIBLE);
-					//progressDialog.show();
+					else
+					{
+						mLeDeviceListAdapter.clear();
+						sendUiActionBroadcast(notifyStartScanDevice());
+						layoutProgress.setVisibility(View.VISIBLE);
+						//progressDialog.show();
+					}
 				}
 			});
 
@@ -627,31 +657,29 @@ public class DeviceListActivity extends Activity
 
 	private void unBondAllDevice(final int delayTime)
 	{
-		new Thread(new Runnable()
+		try
 		{
-			@Override
-			public void run()
+			Thread.sleep(delayTime);
+
+			final Set<BluetoothDevice> deviceSet = getBondedDevice();
+
+			// Get selected device
+			for (BluetoothDevice dev : deviceSet)
 			{
-				try
+				unBondDevice(dev);
+				do
 				{
-					Thread.sleep(delayTime);
-
-					final Set<BluetoothDevice> deviceSet = getBondedDevice();
-
-					// Get selected device
-					for (BluetoothDevice dev : deviceSet)
-					{
-						unBondDevice(dev);
-						Thread.sleep(300);
-					}
-					Thread.sleep(200);
+					Thread.sleep(100);
 				}
-				catch (Exception e)
-				{
-
-				}
+				while(dev.getBondState() != BluetoothDevice.BOND_NONE);
 			}
-		}).start();
+
+			Thread.sleep(500);
+		}
+		catch (Exception e)
+		{
+
+		}
 	}
 
 	private void unBondDevice(final BluetoothDevice device)
