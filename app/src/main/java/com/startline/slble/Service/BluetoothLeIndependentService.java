@@ -1819,7 +1819,7 @@ public class BluetoothLeIndependentService extends Service
 		mDeviceInitState = INIT_STATE_BONDING;
 		broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BONDING));
 		mBluetoothDevice.createBond();
-		setupTaskTimeout(TASK_BOND,10*1000);
+		setupTaskTimeout(TASK_BOND,30*1000);
 	}
 
 	// Keyless
