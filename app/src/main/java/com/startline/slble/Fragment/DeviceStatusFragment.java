@@ -31,9 +31,8 @@ public class DeviceStatusFragment extends Fragment
     //*****************************************************************//
     //  Global Variables                                               //
     //*****************************************************************//
-	private int mKeyCode = 0;
-	private int mReSendInterval = 0;
-	private int mReSendTimes = 0;
+	private int mSendTimes = 0;
+	private int mReceiveTimes = 0;
 
     //*****************************************************************//
     //  Object                                                         //
@@ -65,6 +64,8 @@ public class DeviceStatusFragment extends Fragment
 	private ImageView imgConnectStatus = null;
 	private TextView txtConnectStatus = null;
 	private TextView txtProcess = null;
+
+	private TextView txtSendTimes,txtReceiveTimes;
 
 	private ProgressDialog mProgressDialog = null;
 
@@ -109,6 +110,9 @@ public class DeviceStatusFragment extends Fragment
 		editCommand = (EditText)rootView.findViewById(R.id.edit_command);
 		editInterval = (EditText)rootView.findViewById(R.id.edit_resend_interval);
 		editTimes = (EditText)rootView.findViewById(R.id.edit_resend_times);
+
+		txtSendTimes = (TextView)rootView.findViewById(R.id.txt_send_times);
+		txtReceiveTimes = (TextView)rootView.findViewById(R.id.txt_receive_times);
 
 		final Button btnArm = (Button)rootView.findViewById(R.id.btn_arm);
 		final Button btnDisarm = (Button)rootView.findViewById(R.id.btn_disarm);
@@ -229,23 +233,33 @@ public class DeviceStatusFragment extends Fragment
 		if(mSendCommandThread != null)
 			return;
 
+		mReceiveTimes = 0;
+		mSendTimes = 0;
+
+		txtSendTimes.setText("0");
+		txtReceiveTimes.setText("0");
 		mSendCommandThread = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
 			{
 				boolean gotException = false;
-				int t = 0;
-//				mKeyCode = cmd;
-//				mReSendInterval = interval;
-//				mReSendTimes = times;
+
 				while(!gotException
-						&& t< times)
+						&& mSendTimes< times)
 				{
 					try
 					{
-						t++;
+						mSendTimes++;
 						sendCommand(cmd);
+						mHandler.post(new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								txtSendTimes.setText(String.valueOf(mSendTimes));
+							}
+						});
 						Thread.sleep(interval);
 					}
 					catch (Exception e)
@@ -254,18 +268,18 @@ public class DeviceStatusFragment extends Fragment
 					}
 				}
 
-				if(t == times)
-				{
-					mHandler.post(new Runnable()
-					{
-						@Override
-						public void run()
-						{
-							mProgressDialog.dismiss();
-							Toast.makeText(context,"Timeout",Toast.LENGTH_SHORT).show();
-						}
-					});
-				}
+//				if(t == times)
+//				{
+//					mHandler.post(new Runnable()
+//					{
+//						@Override
+//						public void run()
+//						{
+//							mProgressDialog.dismiss();
+//							Toast.makeText(context,"Timeout",Toast.LENGTH_SHORT).show();
+//						}
+//					});
+//				}
 
 				mSendCommandThread = null;
 			}
@@ -295,7 +309,7 @@ public class DeviceStatusFragment extends Fragment
 			@Override
 			public void run()
 			{
-				mProgressDialog.show();
+				//mProgressDialog.show();
 			}
 		});
 	}
@@ -365,13 +379,17 @@ public class DeviceStatusFragment extends Fragment
 			return;
 		}
 
-		stopCommandThread();
+//		stopCommandThread();
 
-		if(mProgressDialog.isShowing())
-		{
-			mProgressDialog.dismiss();
-			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
-		}
+//		if(mProgressDialog.isShowing())
+//		{
+//			mProgressDialog.dismiss();
+//			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
+//		}
+		mReceiveTimes++;
+		txtReceiveTimes.setText(String.valueOf(mReceiveTimes));
+
+
 
 
 		switch (mode)
