@@ -229,28 +229,13 @@ public class ChFragment extends BaseFragment
                 break;
                 case R.id.spinner_event_on:
                 {
-                    final String[] conditions = getConditionByEvent(position);
-                    spinnerCondOn1.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-                    spinnerCondOn2.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-                    spinnerCondOn3.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-
                     if(mModifiedData[CH_ITEM_EVENT_ON] != value)
                     {
                         mModifiedData[CH_ITEM_EVENT_ON] = value;
                         dataChanged = true;
                     }
 
-                    if(position == 0)
-                    {
-
-                    }
-                    else
-                    {
-                        final String[] conditions_on = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_ON]);
-                        spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_1] & 0x0F]));
-                        spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2] & 0x0F]));
-                        spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3] & 0x0F]));
-                    }
+                    updateSpinnerConditionOn(position);
                 }
                 break;
                 case R.id.spinner_on_condition_1:
@@ -291,28 +276,13 @@ public class ChFragment extends BaseFragment
                 break;
                 case R.id.spinner_event_off:
                 {
-                    final String[] conditions = getConditionByEvent(position);
-                    spinnerCondOff1.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-                    spinnerCondOff2.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-                    spinnerCondOff3.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
-
                     if(mModifiedData[CH_ITEM_EVENT_OFF] != value)
                     {
                         mModifiedData[CH_ITEM_EVENT_OFF] = value;
                         dataChanged = true;
                     }
 
-                    if(position == 0)
-                    {
-
-                    }
-                    else
-                    {
-                        final String[] conditions_off = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_OFF]);
-                        spinnerCondOff1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1] & 0xF0) >> 4]));
-                        spinnerCondOff2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2] & 0xF0) >> 4]));
-                        spinnerCondOff3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3] & 0xF0) >> 4]));
-                    }
+                    updateSpinnerConditionOff(position);
                 }
                 break;
                 case R.id.spinner_off_condition_1:
@@ -572,6 +542,9 @@ public class ChFragment extends BaseFragment
         spinnerEventOn.setSelection(mModifiedData[CH_ITEM_EVENT_ON] < 0 ? 0 : mModifiedData[CH_ITEM_EVENT_ON] > spinnerEventOn.getAdapter().getCount()? spinnerEventOn.getAdapter().getCount()-1: mModifiedData[CH_ITEM_EVENT_ON]);
         spinnerEventOff.setSelection(mModifiedData[CH_ITEM_EVENT_OFF] < 0 ? 0 : mModifiedData[CH_ITEM_EVENT_OFF] > spinnerEventOff.getAdapter().getCount()? spinnerEventOff.getAdapter().getCount()-1: mModifiedData[CH_ITEM_EVENT_OFF]);
 
+        updateSpinnerConditionOn(spinnerEventOn.getSelectedItemPosition());
+        updateSpinnerConditionOff(spinnerEventOff.getSelectedItemPosition());
+
         checkPBrake.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x08) > 0);
         checkTrunk.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x04) > 0);
         checkDoor.setChecked((mModifiedData[CH_ITEM_BYPASS] & 0x02) > 0);
@@ -686,6 +659,48 @@ public class ChFragment extends BaseFragment
         }
 
         return 0;
+    }
+
+    private void updateSpinnerConditionOn(final int position)
+    {
+        final String[] conditions = getConditionByEvent(position);
+        spinnerCondOn1.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+        spinnerCondOn2.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+        spinnerCondOn3.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+
+
+
+        if(position == 0)
+        {
+
+        }
+        else
+        {
+            final String[] conditions_on = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_ON]);
+            spinnerCondOn1.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_1] & 0x0F]));
+            spinnerCondOn2.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_2] & 0x0F]));
+            spinnerCondOn3.setSelection(getConditionIndexByString(conditions_on,FULL_CONDITION[mModifiedData[CH_ITEM_CONDITION_3] & 0x0F]));
+        }
+    }
+
+    private void updateSpinnerConditionOff(final int position)
+    {
+        final String[] conditions = getConditionByEvent(position);
+        spinnerCondOff1.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+        spinnerCondOff2.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+        spinnerCondOff3.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,conditions));
+
+        if(position == 0)
+        {
+
+        }
+        else
+        {
+            final String[] conditions_off = getConditionByEvent(mModifiedData[CH_ITEM_EVENT_OFF]);
+            spinnerCondOff1.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_1] & 0xF0) >> 4]));
+            spinnerCondOff2.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_2] & 0xF0) >> 4]));
+            spinnerCondOff3.setSelection(getConditionIndexByString(conditions_off,FULL_CONDITION[(mModifiedData[CH_ITEM_CONDITION_3] & 0xF0) >> 4]));
+        }
     }
 
     private byte setBit(final byte src,final int bit,final int value)
