@@ -1,8 +1,11 @@
 package com.startline.slble.Fragment;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,12 +31,16 @@ public class DeviceStatusFragment extends Fragment
     //*****************************************************************//
     //  Global Variables                                               //
     //*****************************************************************//
-
+	private int mKeyCode = 0;
+	private int mReSendInterval = 0;
+	private int mReSendTimes = 0;
 
     //*****************************************************************//
     //  Object                                                         //
     //*****************************************************************//
     private Context context;
+	private Thread mSendCommandThread = null;
+
     //*****************************************************************//
     //  View                                                           //
     //*****************************************************************//
@@ -53,9 +60,18 @@ public class DeviceStatusFragment extends Fragment
 	private ImageView imgHBrake = null;
 	private ImageView imgHijack = null;
 	private EditText editCommand = null;
+	private EditText editInterval = null;
+	private EditText editTimes = null;
 	private ImageView imgConnectStatus = null;
 	private TextView txtConnectStatus = null;
 	private TextView txtProcess = null;
+
+	private ProgressDialog mProgressDialog = null;
+
+
+
+
+	private Handler mHandler = new Handler();
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -91,6 +107,8 @@ public class DeviceStatusFragment extends Fragment
 		txtProcess = (TextView)rootView.findViewById(R.id.txt_process);
 
 		editCommand = (EditText)rootView.findViewById(R.id.edit_command);
+		editInterval = (EditText)rootView.findViewById(R.id.edit_resend_interval);
+		editTimes = (EditText)rootView.findViewById(R.id.edit_resend_times);
 
 		final Button btnArm = (Button)rootView.findViewById(R.id.btn_arm);
 		final Button btnDisarm = (Button)rootView.findViewById(R.id.btn_disarm);
@@ -98,7 +116,8 @@ public class DeviceStatusFragment extends Fragment
 		final Button btnRemoteStart = (Button)rootView.findViewById(R.id.btn_remote_start);
 		final Button btnRemoteStop = (Button)rootView.findViewById(R.id.btn_remote_stop);
 		final Button btnCheck = (Button)rootView.findViewById(R.id.btn_check);
-		final Button btnCustomCommand = (Button)rootView.findViewById(R.id.btn_command);
+		final Button btnStartSendCommand = (Button)rootView.findViewById(R.id.btn_start_send_command);
+		final Button btnStopSendCommand = (Button)rootView.findViewById(R.id.btn_stop_send_command);
 		final View.OnClickListener btnOnCLick = new View.OnClickListener()
 		{
 			@Override
@@ -113,7 +132,18 @@ public class DeviceStatusFragment extends Fragment
 		btnRemoteStart.setOnClickListener(btnOnCLick);
 		btnRemoteStop.setOnClickListener(btnOnCLick);
 		btnCheck.setOnClickListener(btnOnCLick);
-		btnCustomCommand.setOnClickListener(btnOnCLick);
+		btnStartSendCommand.setOnClickListener(btnOnCLick);
+		btnStopSendCommand.setOnClickListener(btnOnCLick);
+	}
+
+	@Override
+	public void onActivityCreated(@Nullable Bundle savedInstanceState)
+	{
+		super.onActivityCreated(savedInstanceState);
+
+		context = getActivity();
+		mProgressDialog = new ProgressDialog(context);
+		mProgressDialog.setMessage("Waiting...");
 	}
 
 	private void handleCommandButtonCLick(final View view)
@@ -151,22 +181,38 @@ public class DeviceStatusFragment extends Fragment
 				command = CONTROL_ALARM_CHECK_CAR_STATUS;
 			}
 			break;
-			case R.id.btn_command:
+			case R.id.btn_start_send_command:
 			{
-				final String str = editCommand.getText().toString();
-				if(str.length() > 0)
+				final String strCmd = editCommand.getText().toString();
+				final String strInterval = editInterval.getText().toString();
+				final String strTimes = editTimes.getText().toString();
+				if(strCmd.isEmpty())
+					return;
+				if(strInterval.isEmpty())
+					return;
+				if(strTimes.isEmpty())
+					return;
+
+				try
 				{
-					try
-					{
-						final int intCmd = Integer.parseInt(str);
-						sendCommand(intCmd);
-					}
-					catch (Exception e)
-					{
-						LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
-					}
+					final int intCmd = Integer.parseInt(strCmd);
+					final int intInterval = Integer.parseInt(strInterval);
+					final int intTimes = Integer.parseInt(strTimes);
+					//sendCommand(intCmd);
+
+					startCommandThread(intCmd,intInterval,intTimes);
+				}
+				catch (Exception e)
+				{
+					LogUtil.e(TAG,e.toString(),Thread.currentThread().getStackTrace());
 				}
 			}
+			break;
+			case R.id.btn_stop_send_command:
+			{
+				stopCommandThread();
+			}
+			break;
 
 			default:
 				break;
@@ -178,6 +224,64 @@ public class DeviceStatusFragment extends Fragment
 		}
 	}
 
+	private void startCommandThread(final int cmd,final int interval,final int times)
+	{
+		if(mSendCommandThread != null)
+			return;
+
+		mSendCommandThread = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				boolean gotException = false;
+				int t = 0;
+//				mKeyCode = cmd;
+//				mReSendInterval = interval;
+//				mReSendTimes = times;
+				while(!gotException
+						&& t< times)
+				{
+					try
+					{
+						t++;
+						sendCommand(cmd);
+						Thread.sleep(interval);
+					}
+					catch (Exception e)
+					{
+						gotException = true;
+					}
+				}
+
+				if(t == times)
+				{
+					mHandler.post(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							mProgressDialog.dismiss();
+							Toast.makeText(context,"Timeout",Toast.LENGTH_SHORT).show();
+						}
+					});
+				}
+
+				mSendCommandThread = null;
+			}
+		});
+
+		mSendCommandThread.start();
+	}
+
+	private void stopCommandThread()
+	{
+		if(mSendCommandThread != null)
+		{
+			mSendCommandThread.interrupt();
+		}
+	}
+
 
 	private void sendCommand(final int command)
 	{
@@ -185,6 +289,15 @@ public class DeviceStatusFragment extends Fragment
 		intent.putExtra("mode",BluetoothLeIndependentService.MODE_CONTROL_COMMAND);
 		intent.putExtra("param", command);
         sendCommand(intent);
+
+		mHandler.post(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				mProgressDialog.show();
+			}
+		});
 	}
 
 	public void disableEnableControls(final ViewGroup viewGroup,final boolean enable)
@@ -236,6 +349,11 @@ public class DeviceStatusFragment extends Fragment
 		else
 		{
 			disableEnableControls(layoutControlSection,false);
+			if(mProgressDialog.isShowing())
+			{
+				mProgressDialog.dismiss();
+			}
+			stopCommandThread();
 		}
 	}
 
@@ -244,9 +362,17 @@ public class DeviceStatusFragment extends Fragment
 		// Error
 	 	if(csta < 0)
 		{
-
 			return;
 		}
+
+		stopCommandThread();
+
+		if(mProgressDialog.isShowing())
+		{
+			mProgressDialog.dismiss();
+			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
+		}
+
 
 		switch (mode)
 		{
