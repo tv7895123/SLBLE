@@ -850,6 +850,13 @@ public class BluetoothLeIndependentService extends Service
 				return;
 			}
 
+			if(!isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+			{
+				LogUtil.d(TAG, String.format("Device %s already disconnected, un-register gatt callback",mBluetoothDevice.getAddress()),Thread.currentThread().getStackTrace());
+				getBluetoothGatt().disconnect();
+				return;
+			}
+
 			if (status == BluetoothGatt.GATT_SUCCESS)
 			{
 				if (rssi < 0)
@@ -865,7 +872,7 @@ public class BluetoothLeIndependentService extends Service
 	};
 
 	// Device scan callback.
-	private BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback()
+	private final BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback()
 	{
 		@Override
 		public void onLeScan(final BluetoothDevice device, final int rssi, byte[] scanRecord)
@@ -1897,11 +1904,27 @@ public class BluetoothLeIndependentService extends Service
 								if(!mScanning)
 								{
 									clearAllDevice();
-									startScan();
+									mHandler.post(new Runnable()
+									{
+										@Override
+										public void run()
+										{
+											startScan();
+										}
+									});
 
-									Thread.sleep(200);
 
-									stopScan();
+									Thread.sleep(1000);
+
+									mHandler.post(new Runnable()
+									{
+										@Override
+										public void run()
+										{
+											stopScan();
+										}
+									});
+
 									for(int i=0 ;i<mBleDeviceRssiAdapter.getCount(); i++)
 									{
 										final BleDeviceRssi deviceRssi = mBleDeviceRssiAdapter.getDevice(i);
@@ -2462,18 +2485,34 @@ public class BluetoothLeIndependentService extends Service
 			}
 
 			mAllowReBind = false;
+
 			// Allow to re-connect under limit
-			if(mBluetoothDevice != null && mBindRetry++ < TASK_BIND_RETRY_MAX && isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+			if(mBluetoothDevice != null && mBindRetry++ < TASK_BIND_RETRY_MAX)
 			{
-				mHandler.postDelayed(new Runnable()
+				if(isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
 				{
-					@Override
-					public void run()
+					mHandler.postDelayed(new Runnable()
 					{
-						LogUtil.d(TAG,"Re-binding, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
-						_bind(); //handleBleDisconnect
-					}
-				},2000);
+						@Override
+						public void run()
+						{
+							LogUtil.d(TAG,"Re-binding, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
+							_bind(); //handleBleDisconnect
+						}
+					},2000);
+				}
+				else
+				{
+					mHandler.postDelayed(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							LogUtil.d(TAG,"Re-connect, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
+							_connect(); //handleBleDisconnect
+						}
+					},2000);
+				}
 			}
 		}
 		catch (Exception e)
