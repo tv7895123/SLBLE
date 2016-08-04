@@ -405,8 +405,8 @@
                     android:orientation="horizontal">
                 <TextView android:layout_width="120dp" android:layout_height="wrap_content" android:text="Re-send Times："/>
                 <EditText android:id="@+id/edit_resend_times" android:layout_width="80dp" android:layout_height="wrap_content"  android:inputType="numberDecimal" android:text="5"/>
-                <TextView android:id="@+id/txt_send_times" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="15dp" android:text="20"/>
-                <TextView android:id="@+id/txt_receive_times" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="15dp" android:text="20"/>
+                <TextView android:id="@+id/txt_send_times" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="15dp" android:text="0"/>
+                <TextView android:id="@+id/txt_receive_times" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="15dp" android:text="0"/>
             </LinearLayout>
             <LinearLayout
                     android:layout_width="match_parent"
