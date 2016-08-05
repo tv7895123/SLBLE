@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+import com.startline.slble.PureClass.SlbleCommand;
 import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 import com.startline.slble.Util.LogUtil;
@@ -23,26 +24,28 @@ import static com.startline.slble.PureClass.SlbleProtocol.*;
  */
 public class DeviceStatusFragment extends Fragment
 {
-    //*****************************************************************//
-    //  Constant Variables                                             //
-    //*****************************************************************//
+	//*****************************************************************//
+	//  Constant Variables                                             //
+	//*****************************************************************//
 	private final static String TAG = DeviceStatusFragment.class.getSimpleName();
 
-    //*****************************************************************//
-    //  Global Variables                                               //
-    //*****************************************************************//
+	//*****************************************************************//
+	//  Global Variables                                               //
+	//*****************************************************************//
 	private int mSendTimes = 0;
 	private int mReceiveTimes = 0;
+	private boolean mWaitResponse = false;
 
-    //*****************************************************************//
-    //  Object                                                         //
-    //*****************************************************************//
-    private Context context;
-	private Thread mSendCommandThread = null;
+	//*****************************************************************//
+	//  Object                                                         //
+	//*****************************************************************//
+	private Context context;
+	private Thread mThreadSendCommand = null;
 
-    //*****************************************************************//
-    //  View                                                           //
-    //*****************************************************************//
+
+	//*****************************************************************//
+	//  View                                                           //
+	//*****************************************************************//
 	private View rootView = null;
 	private LinearLayout layoutControlSection = null;
 
@@ -60,6 +63,7 @@ public class DeviceStatusFragment extends Fragment
 	private ImageView imgHijack = null;
 	private EditText editCommand = null;
 	private EditText editInterval = null;
+	private EditText editMaxReSendTimes = null;
 	private EditText editTimes = null;
 	private ImageView imgConnectStatus = null;
 	private TextView txtConnectStatus = null;
@@ -88,7 +92,7 @@ public class DeviceStatusFragment extends Fragment
 
 	private void setupViews()
 	{
-   		imgDoor = (ImageView)rootView.findViewById(R.id.img_door);
+		imgDoor = (ImageView)rootView.findViewById(R.id.img_door);
 		imgHood = (ImageView)rootView.findViewById(R.id.img_hood);
 		imgTrunk = (ImageView)rootView.findViewById(R.id.img_trunk);
 		imgIgn = (ImageView)rootView.findViewById(R.id.img_ign);
@@ -109,7 +113,8 @@ public class DeviceStatusFragment extends Fragment
 
 		editCommand = (EditText)rootView.findViewById(R.id.edit_command);
 		editInterval = (EditText)rootView.findViewById(R.id.edit_resend_interval);
-		editTimes = (EditText)rootView.findViewById(R.id.edit_resend_times);
+		editMaxReSendTimes = (EditText)rootView.findViewById(R.id.edit_resend_times);
+		editTimes = (EditText)rootView.findViewById(R.id.edit_send_command_times);
 
 		txtSendTimes = (TextView)rootView.findViewById(R.id.txt_send_times);
 		txtReceiveTimes = (TextView)rootView.findViewById(R.id.txt_receive_times);
@@ -127,7 +132,7 @@ public class DeviceStatusFragment extends Fragment
 			@Override
 			public void onClick(View v)
 			{
-			 	handleCommandButtonCLick(v);
+				handleCommandButtonCLick(v);
 			}
 		};
 		btnArm.setOnClickListener(btnOnCLick);
@@ -187,12 +192,18 @@ public class DeviceStatusFragment extends Fragment
 			break;
 			case R.id.btn_start_send_command:
 			{
+				if(mThreadSendCommand != null)
+					return;
+
 				final String strCmd = editCommand.getText().toString();
 				final String strInterval = editInterval.getText().toString();
+				final String strMaxResend = editMaxReSendTimes.getText().toString();
 				final String strTimes = editTimes.getText().toString();
 				if(strCmd.isEmpty())
 					return;
 				if(strInterval.isEmpty())
+					return;
+				if(strMaxResend.isEmpty())
 					return;
 				if(strTimes.isEmpty())
 					return;
@@ -201,10 +212,46 @@ public class DeviceStatusFragment extends Fragment
 				{
 					final int intCmd = Integer.parseInt(strCmd);
 					final int intInterval = Integer.parseInt(strInterval);
-					final int intTimes = Integer.parseInt(strTimes);
+					final int intReSend = Integer.parseInt(strMaxResend);
+					final int totalTimes = Integer.parseInt(strTimes);
 					//sendCommand(intCmd);
 
-					startCommandThread(intCmd,intInterval,intTimes);
+					mThreadSendCommand = new Thread(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							mSendTimes = 0;
+							while(mSendTimes < totalTimes)
+							{
+								try
+								{
+									if(!mWaitResponse)
+									{
+										mWaitResponse = true;
+										mSendTimes++;
+										mHandler.post(new Runnable()
+										{
+											@Override
+											public void run()
+											{
+												txtSendTimes.setText(String.valueOf(mSendTimes));
+											}
+										});
+										sendCommand(intCmd,intInterval,intReSend);
+									}
+
+									Thread.sleep(100);
+								}
+								catch (Exception e)
+								{
+
+								}
+							}
+						}
+					});
+
+					mThreadSendCommand.start();
 				}
 				catch (Exception e)
 				{
@@ -214,7 +261,7 @@ public class DeviceStatusFragment extends Fragment
 			break;
 			case R.id.btn_stop_send_command:
 			{
-				stopCommandThread();
+				stopSendCommand();
 			}
 			break;
 
@@ -228,6 +275,7 @@ public class DeviceStatusFragment extends Fragment
 		}
 	}
 
+	/* START
 	private void startCommandThread(final int cmd,final int interval,final int times)
 	{
 		if(mSendCommandThread != null)
@@ -268,18 +316,18 @@ public class DeviceStatusFragment extends Fragment
 					}
 				}
 
-//				if(t == times)
-//				{
-//					mHandler.post(new Runnable()
-//					{
-//						@Override
-//						public void run()
-//						{
-//							mProgressDialog.dismiss();
-//							Toast.makeText(context,"Timeout",Toast.LENGTH_SHORT).show();
-//						}
-//					});
-//				}
+				if(t == times)
+				{
+					mHandler.post(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							mProgressDialog.dismiss();
+							Toast.makeText(context,"Timeout",Toast.LENGTH_SHORT).show();
+						}
+					});
+				}
 
 				mSendCommandThread = null;
 			}
@@ -295,35 +343,56 @@ public class DeviceStatusFragment extends Fragment
 			mSendCommandThread.interrupt();
 		}
 	}
-
+	/END*/
 
 	private void sendCommand(final int command)
 	{
-        final Intent intent = new Intent(BluetoothLeIndependentService.ACTION_UI_NOTIFY_SERVICE);
+		sendCommand(command,200,0);
+	}
+
+	private void sendCommand(final int command,final int interval,final int times)
+	{
+		final Intent intent = new Intent(BluetoothLeIndependentService.ACTION_UI_NOTIFY_SERVICE);
 		intent.putExtra("mode",BluetoothLeIndependentService.MODE_CONTROL_COMMAND);
-		intent.putExtra("param", command);
-        sendCommand(intent);
+		intent.putExtra("command", command);
+		intent.putExtra("interval", interval);
+		intent.putExtra("times", times);
+		sendToService(intent);
 
 		mHandler.post(new Runnable()
 		{
 			@Override
 			public void run()
 			{
-				//mProgressDialog.show();
+				mProgressDialog.setMessage("Waiting ACK...");
+				mProgressDialog.show();
 			}
 		});
+	}
+
+	private void stopSendCommand()
+	{
+		final Intent intent = new Intent(BluetoothLeIndependentService.ACTION_UI_NOTIFY_SERVICE);
+		intent.putExtra("mode",BluetoothLeIndependentService.MODE_CONTROL_COMMAND_STOP);
+		sendToService(intent);
+
+		if(mThreadSendCommand != null)
+		{
+			mThreadSendCommand.interrupt();
+		}
+		mThreadSendCommand = null;
 	}
 
 	public void disableEnableControls(final ViewGroup viewGroup,final boolean enable)
 	{
 		for (int i = 0; i < viewGroup.getChildCount(); i++)
 		{
-		   View child = viewGroup.getChildAt(i);
-		   child.setEnabled(enable);
-		   if (child instanceof ViewGroup)
-		   {
-			  disableEnableControls((ViewGroup)child,enable);
-		   }
+			View child = viewGroup.getChildAt(i);
+			child.setEnabled(enable);
+			if (child instanceof ViewGroup)
+			{
+				disableEnableControls((ViewGroup)child,enable);
+			}
 		}
 	}
 
@@ -331,7 +400,7 @@ public class DeviceStatusFragment extends Fragment
 	//==============================================================================
 	//  Call TabActivity function
 	//==============================================================================
-	private void sendCommand(final Intent intent)
+	private void sendToService(final Intent intent)
 	{
 		getActivity().sendBroadcast(intent);
 	}
@@ -339,17 +408,66 @@ public class DeviceStatusFragment extends Fragment
 	//==============================================================================
 	//  For TabActivity function
 	//==============================================================================
+	public void updateCommandState(final SlbleCommand slbleCommand)
+	{
+		if(slbleCommand == null)
+		{
+			return;
+		}
+
+		if(slbleCommand.data != null)
+		{
+			mWaitResponse = false;
+			displayDeviceStatus(0,(long)slbleCommand.data);
+			mProgressDialog.dismiss();
+			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
+			return;
+		}
+
+		if(slbleCommand.currentTimes == slbleCommand.maxTimes)
+		{
+			mWaitResponse = false;
+			mProgressDialog.dismiss();
+			Toast.makeText(context,"Control fail",Toast.LENGTH_SHORT).show();
+			return;
+		}
+
+		switch (slbleCommand.state)
+		{
+			case -1:
+			{
+				mProgressDialog.dismiss();
+				Toast.makeText(context,"Command fail.", Toast.LENGTH_SHORT).show();
+			}
+			break;
+
+			case PARAM_ACCEPT_COMMAND:
+			case PARAM_COMMAND_PROCESSING:
+			{
+				mProgressDialog.setMessage("Waiting CSTA...");
+			}
+			break;
+
+			case PARAM_REJECT_COMMAND:
+			{
+				mProgressDialog.dismiss();
+				Toast.makeText(context,"Command reject.", Toast.LENGTH_SHORT).show();
+			}
+			break;
+		}
+	}
+
 	public void updateProcess(final String message)
 	{
 		txtProcess.setText(message);
 		txtConnectStatus.setText("");
-    }
+	}
 
 	public void updateConnectionStatus(final int stringId)
 	{
 		txtProcess.setText("");
 		txtConnectStatus.setText(getString(stringId));
-    }
+	}
 
 	public void updateConnectionStatusIcon(final boolean activated,final boolean selected)
 	{
@@ -367,30 +485,23 @@ public class DeviceStatusFragment extends Fragment
 			{
 				mProgressDialog.dismiss();
 			}
-			stopCommandThread();
+			stopSendCommand();
 		}
 	}
 
 	public void displayDeviceStatus(final int mode,final long csta)
 	{
 		// Error
-	 	if(csta < 0)
+		if(csta < 0)
 		{
 			return;
 		}
 
-//		stopCommandThread();
-
-//		if(mProgressDialog.isShowing())
-//		{
-//			mProgressDialog.dismiss();
-//			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
-//		}
-		mReceiveTimes++;
-		txtReceiveTimes.setText(String.valueOf(mReceiveTimes));
-
-
-
+		if(mThreadSendCommand != null)
+		{
+			mReceiveTimes++;
+			txtReceiveTimes.setText(String.valueOf(mReceiveTimes));
+		}
 
 		switch (mode)
 		{

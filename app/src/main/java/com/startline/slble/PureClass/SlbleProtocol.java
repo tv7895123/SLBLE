@@ -34,6 +34,7 @@ public class SlbleProtocol
 	public static final byte CMD_BLE_DEBUG = 0x01;
 	public static final byte CMD_ACK = 0x02;
 	public static final byte CMD_ERROR_MESSAGE = 0x03;
+	public static final byte CMD_MAIN_ERROR_MESSAGE = 0x04;
 	public static final byte CMD_CAR_STATUS = 0x20;
 	public static final byte CMD_PHONE_CONTROL_COMMAND = 0x30;
 	public static final byte CMD_TX_POWER = 0x40;
@@ -55,6 +56,9 @@ public class SlbleProtocol
 
 	//-------------------------------------------------------------------
 	// CMD_ACK   0x02
+	public static final int PARAM_ACCEPT_COMMAND = 0x00;
+	public static final int PARAM_COMMAND_PROCESSING = 0x01;
+	public static final int PARAM_REJECT_COMMAND = 0x02;
 	public static final int PARAM_ACK = 0xFF;
 
 
@@ -67,6 +71,11 @@ public class SlbleProtocol
 	public static final int PARAM_MESSAGE_RANDOM_NUMBER = 0x04;
 	public static final int PARAM_MESSAGE_TX_POWER_ERROR = 0x05;
 	public static final int PARAM_MESSAGE_PROGRAM_DATA_ERROR = 0x06;
+
+
+	//-------------------------------------------------------------------
+	// CMD_MAIN_ERROR_MESSAGE   0x04
+	public static final int PARAM_BUSY = 0xFF;
 
 
 	//-------------------------------------------------------------------

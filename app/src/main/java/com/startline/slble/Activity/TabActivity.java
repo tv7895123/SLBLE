@@ -22,6 +22,7 @@ import android.content.*;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTabHost;
 import android.util.Log;
@@ -30,6 +31,7 @@ import android.widget.*;
 
 import com.startline.slble.Fragment.DeviceConnectFragment;
 import com.startline.slble.Fragment.DeviceStatusFragment;
+import com.startline.slble.PureClass.SlbleCommand;
 import com.startline.slble.R;
 
 import com.startline.slble.Service.BluetoothLeIndependentService;
@@ -72,7 +74,6 @@ public class TabActivity extends FragmentActivity
 	//  Object                                                         //
 	//*****************************************************************//
 	private Context context;
-	private Handler mHandler = null;
 	private BluetoothLeIndependentService mBluetoothLeService = null;
 	private DeviceConnectFragment mDeviceConnectFragment = null;
 	private DeviceStatusFragment mDeviceStatusFragment = null;
@@ -84,6 +85,22 @@ public class TabActivity extends FragmentActivity
 	private FragmentTabHost mTabHost = null;
 	private RelativeLayout layoutDebugInfo = null;
 	private ProgressDialog mProgressDialog = null;
+
+	private Handler mHandler = new Handler()
+	{
+		@Override
+		public void handleMessage(Message msg)
+		{
+			switch (msg.arg1)
+			{
+				case IPC_COMMAND_COMMAND_STATE:
+				{
+					updateCommandState(msg.obj);
+				}
+				break;
+			}
+		}
+	};
 
 
 	// Code to manage Service lifecycle.
@@ -317,7 +334,6 @@ public class TabActivity extends FragmentActivity
 		//setContentView(R.layout.device_connect);
 		setContentView(R.layout.tab_activity);
 		context = this;
-		mHandler = new Handler();
 
 		final Intent intent = getIntent();
 		mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
@@ -345,6 +361,7 @@ public class TabActivity extends FragmentActivity
 		if(mBluetoothLeService!= null)
 		{
 			mAutoScrollDown = mBluetoothLeService.getAutoScroll();
+			mBluetoothLeService.setIpcCallbackhandler(mHandler);
 		}
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -357,6 +374,7 @@ public class TabActivity extends FragmentActivity
 	{
 		super.onPause();
 		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		mBluetoothLeService.setIpcCallbackhandler(null);
 	}
 
 	@Override
@@ -462,6 +480,7 @@ public class TabActivity extends FragmentActivity
 		}
 
 		mTabHost.setCurrentTab(1);
+		mBluetoothLeService.setIpcCallbackhandler(mHandler);
 
 		// Automatically connects to the device upon successful start-up initialization.
 		mBluetoothLeService.setManualConnect(true);
@@ -650,6 +669,12 @@ public class TabActivity extends FragmentActivity
 	//==============================================================================
 	//  DeviceStatusFragment function
 	//==============================================================================
+	private void updateCommandState(final Object object)
+	{
+		if(getDeviceStatusFragment() != null)
+			getDeviceStatusFragment().updateCommandState((SlbleCommand)object);
+	}
+
 	private void updateProcess(final String message)
 	{
 		if(getDeviceStatusFragment() != null)
