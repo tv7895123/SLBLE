@@ -815,7 +815,7 @@ public class BluetoothLeIndependentService extends Service
 						if (gatt.getDevice().getBondState() == BluetoothDevice.BOND_NONE)
 						{
 							appendLog("GATT_INSUFFICIENT_AUTHENTICATION");
-							//_bonding();
+							_bondingDevice();
 						}
 						else
 						{
@@ -1840,9 +1840,26 @@ public class BluetoothLeIndependentService extends Service
 	{
 		mDeviceInitState = INIT_STATE_BONDING;
 		broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BONDING));
-		mBluetoothDevice.createBond();
 		setupTaskTimeout(TASK_BOND,30*1000);
-	}
+
+		try
+		{
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+			{
+				mBluetoothDevice.createBond();
+			}
+			else
+			{
+				final Method method = mBluetoothDevice.getClass().getMethod("createBond", (Class[]) null);
+				method.invoke(mBluetoothDevice, (Object[]) null);
+			}
+		}
+		catch (Exception e)
+		{
+			Toast.makeText(context,"Can not bond device",Toast.LENGTH_SHORT).show();
+			removeTaskTimeout();
+			Log.e(TAG, e.getMessage());
+		}}
 
 	// Keyless
 	// Connect function

@@ -29,8 +29,8 @@ android {
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
         buildConfigField "String", "GITHASH", "\"${getGitHash()}\""
         applicationId "com.startline.slble"
-        minSdkVersion 19
-        targetSdkVersion 19
+        minSdkVersion 18
+        targetSdkVersion 18
         versionCode 1
         versionName "1.0"
     }
