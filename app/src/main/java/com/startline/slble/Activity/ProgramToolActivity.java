@@ -179,7 +179,14 @@ public class ProgramToolActivity extends AppCompatActivity
                         }
                         else
                         {
-                            Toast.makeText(context,"Exit program mode failed",Toast.LENGTH_SHORT).show();
+                            if(mService.isInProgramMode())
+                            {
+                                Toast.makeText(context,"Exit program mode failed",Toast.LENGTH_SHORT).show();
+                            }
+                            else
+                            {
+                                finish();
+                            }
                         }
                     }
                 }
