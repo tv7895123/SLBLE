@@ -415,6 +415,7 @@ public class DeviceStatusFragment extends Fragment
 			return;
 		}
 
+		// Receive CSTA
 		if(slbleCommand.data != null)
 		{
 			mWaitResponse = false;
@@ -424,6 +425,7 @@ public class DeviceStatusFragment extends Fragment
 			return;
 		}
 
+		// Reach MAX retry
 		if(slbleCommand.currentTimes == slbleCommand.maxTimes)
 		{
 			mWaitResponse = false;
@@ -432,8 +434,10 @@ public class DeviceStatusFragment extends Fragment
 			return;
 		}
 
+		// State update
 		switch (slbleCommand.state)
 		{
+			// Not receive response
 			case -1:
 			{
 				mProgressDialog.dismiss();

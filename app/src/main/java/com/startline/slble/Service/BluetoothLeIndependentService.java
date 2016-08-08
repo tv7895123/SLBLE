@@ -3058,6 +3058,7 @@ public class BluetoothLeIndependentService extends Service
 
 						Thread.sleep(50);
 
+						// Wait for CSTA , delay 1s
 						if(mSlbleCommand.currentTimes == times)
 						{
 							Thread.sleep(1000);
