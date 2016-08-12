@@ -54,7 +54,12 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 		}
 
 		if(contains == false)
+		{
 			mBleDeviceList.add(bluetoothDeviceRssi);
+		}
+
+		if(mBleDeviceList.size()>1)
+			quickSort(mBleDeviceList,0,mBleDeviceList.size()-1);
 	}
 
 	public BleDeviceRssi getDevice(int position)
@@ -146,5 +151,56 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 		viewHolder.deviceRssi.setText(deviceRssi.rssi+" mdB");
 
 		return view;
+	}
+
+	private void swap (ArrayList<BleDeviceRssi> list, final int i, final int j)
+	{
+		BleDeviceRssi tmpI = list.get(i);
+		BleDeviceRssi tmpJ = list.get(j);
+		list.set(i,tmpJ);
+		list.set(j,tmpI);
+	};
+
+	private void quickSort(ArrayList<BleDeviceRssi> list,final int indexLeft, final int indexRight)
+	{
+		if(indexLeft >= indexRight)
+			return;
+
+
+		int i, j;
+		BleDeviceRssi pivot = list.get(indexLeft);
+
+		i = indexLeft + 1;
+		j = indexRight;
+
+		while (true)
+		{
+			while (i <= indexRight)
+			{
+				if (list.get(i).rssi < pivot.rssi)
+				{
+					break;
+				}
+				i = i + 1;
+			}
+
+			while (j > indexLeft)
+			{
+				if (list.get(j).rssi > pivot.rssi)
+				{
+					break;
+				}
+				j = j - 1;
+			}
+
+			if (i > j)
+				break;
+
+			swap(list,indexLeft,indexRight);
+		}
+
+		swap(list,indexLeft, j);
+		quickSort(list, indexLeft, j - 1);
+		quickSort(list, j + 1, indexRight);
 	}
 }
