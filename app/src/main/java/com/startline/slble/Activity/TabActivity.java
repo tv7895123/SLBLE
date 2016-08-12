@@ -391,7 +391,8 @@ public class TabActivity extends FragmentActivity
 			if(SUPPORT_MULTI_DEVICE == false)
 			{
 				mBluetoothLeService.removeBluetoothDeviceFromCache(mDeviceAddress);
-				mBluetoothLeService.disconnect(false);
+				mBluetoothLeService.setAllowConnect(false);
+				mBluetoothLeService.disconnect();
 				mBluetoothLeService = null;
 			}
 			else
@@ -483,7 +484,6 @@ public class TabActivity extends FragmentActivity
 		mBluetoothLeService.setIpcCallbackhandler(mHandler);
 
 		// Automatically connects to the device upon successful start-up initialization.
-		mBluetoothLeService.setManualConnect(true);
 		mBluetoothLeService.initConnectDevice(mDeviceAddress);
 		mAutoScrollDown = mBluetoothLeService.getAutoScroll();
 	}

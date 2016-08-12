@@ -216,8 +216,7 @@ public class BluetoothLeIndependentService extends Service
 	private int  mAckFlag = 0;
 
 	// Connect
-	private boolean mAllowReBind = false;
-	private boolean mManualConnect = false;
+	private boolean mAllowConnect = false;
 
 	// App Setting
 	private boolean mAutoConnectOnDisconnect = false;
@@ -484,8 +483,9 @@ public class BluetoothLeIndependentService extends Service
 						return;
 					}
 
+					mDeviceInitState = INIT_STATE_NONE;
+
 					removeTaskTimeout(); // Remove Bonding timeout runnable
-					appendLog("Bond failed");
 					broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BOND_FAILED));
 				}
 				else if(previousBondState == BluetoothDevice.BOND_BONDED && bondState == BluetoothDevice.BOND_NONE)
@@ -508,8 +508,8 @@ public class BluetoothLeIndependentService extends Service
 			{
 				case TASK_BOND:
 				{
-					appendLog("Connect timeout");
-					LogUtil.d(TAG,"Connect timeout",Thread.currentThread().getStackTrace());
+					appendLog("Bonding timeout");
+					LogUtil.d(TAG,"Bonding timeout",Thread.currentThread().getStackTrace());
 					broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BOND_FAILED));
 				}
 				break;
@@ -517,7 +517,7 @@ public class BluetoothLeIndependentService extends Service
 				{
 					appendLog("Bind timeout");
 					LogUtil.d(TAG,"Bind timeout",Thread.currentThread().getStackTrace());
-					disconnect(true);
+					disconnect();
 					handleBleDisconnect();
 				}
 				break;
@@ -569,7 +569,7 @@ public class BluetoothLeIndependentService extends Service
 					else
 					{
 						// If bluetoothGatt is released, reset resources to disconnected
-						disconnect(true); // readRssiRunnable
+						disconnect(); // readRssiRunnable
 					}
 				}
 				catch (Exception e)
@@ -578,28 +578,6 @@ public class BluetoothLeIndependentService extends Service
 					cancelRssiTimer();
 					LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
 				}
-			}
-		}
-	};
-
-	// Task retry functions
-	// Do action depends on mTaskRetry
-	private final Runnable taskRetryRunnable = new Runnable()
-	{
-		@Override
-		public void run()
-		{
-			// No limit retry times or still under limit, continue retry
-			if ( CONNECTION_MAX_RETRY == -1 || mTaskRetry++ < CONNECTION_MAX_RETRY)
-			{
-				handleTaskTimeout();
-			}
-			// exceed max try times limit, cancel task and disconnect
-			else
-			{
-				disconnect(false);  //taskRetryRunnable
-				cancelTaskTimeoutTimer();  //taskRetryRunnable
-				broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_CANCEL));
 			}
 		}
 	};
@@ -683,14 +661,14 @@ public class BluetoothLeIndependentService extends Service
 					{
 						appendLog("Discovery service but device disconnected");
 						LogUtil.d(TAG, "Discovery service but device disconnected", Thread.currentThread().getStackTrace());
-						disconnect(true); //Discovery service but device disconnected
+						disconnect(); //Discovery service but device disconnected
 					}
 				}
 				else
 				{
 					appendLog("Discovery service failed.");
 					LogUtil.d(TAG, "Discovery service failed.", Thread.currentThread().getStackTrace());
-					disconnect(true); //Discovery service failed
+					disconnect(); //Discovery service failed
 				}
 			}
 			catch (Exception e)
@@ -829,7 +807,7 @@ public class BluetoothLeIndependentService extends Service
 					}
 					else
 					{
-						disconnect(true); //Enable notification failed
+						disconnect(); //Enable notification failed
 						appendLog("Enable notification failed");
 						LogUtil.d(TAG, "Enable notification failed.",Thread.currentThread().getStackTrace());
 					}
@@ -837,7 +815,7 @@ public class BluetoothLeIndependentService extends Service
 				else
 				{
 					appendLog("onDescriptorWrite unknown status");
-					disconnect(false);
+					disconnect();
 				}
 			}
 			catch (Exception e)
@@ -979,29 +957,29 @@ public class BluetoothLeIndependentService extends Service
 
 							if(mBluetoothDevice != null)
 							{
-								setManualConnect(true);
-								connectDevice(mBluetoothDevice.getAddress());  // Manual connect
+								if(mBluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDED)
+								{
+									connectDevice(mBluetoothDevice.getAddress());  // Manual connect
+								}
+								else if(mBluetoothDevice.getBondState() == BluetoothDevice.BOND_BONDING)
+								{
+									Toast.makeText(context,"Device is binding now, please wait binding process finished.",Toast.LENGTH_LONG).show();
+								}
+								else
+								{
+									Toast.makeText(context,"Device not bonded, please bond device first.",Toast.LENGTH_LONG).show();
+								}
+							}
+							else
+							{
+								Toast.makeText(context,"Cannot find device!!",Toast.LENGTH_LONG).show();
 							}
 						}
 						break;
 
 						case MODE_DISCONNECT:
 						{
-							if(!isBluetoothEnabled())
-							{
-								appendLog("Bluetooth is not enabled");
-								LogUtil.d(TAG,"Bluetooth is not enabled",Thread.currentThread().getStackTrace());
-								return;
-							}
-
-							stopConnectThread();
-
-							disconnect(false);  //MODE_BLE_DISCONNECT
-							if(mInputDeviceProfile != null && mInputDeviceProfile.getConnectionState(mBluetoothDevice) == BluetoothProfile.STATE_CONNECTED)
-							{
-								appendLog("closeBTConnection");
-								closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
-							}
+							cutAllConnection();
 						}
 						break;
 
@@ -1010,9 +988,9 @@ public class BluetoothLeIndependentService extends Service
 							final int command = intent.getIntExtra("command", 0);
 							final int interval = intent.getIntExtra("interval", 200);
 							final int times = intent.getIntExtra("times", 0);
-							//sendCommand(command);
+							sendCommand(command);
 
-							startCommandThread(command,interval,times);
+							//startCommandThread(command,interval,times);
 						}
 						break;
 
@@ -1152,7 +1130,9 @@ public class BluetoothLeIndependentService extends Service
 		// Must disconnect device and recycle resources when service destroyed
 		if(mConnectionState == BluetoothProfile.STATE_CONNECTING
 				|| mConnectionState == BluetoothProfile.STATE_CONNECTED)
-			disconnect(false);
+		{
+			disconnect();
+		}
 
 		try
 		{
@@ -1272,11 +1252,6 @@ public class BluetoothLeIndependentService extends Service
 		return slaveTagCounter;
 	}
 
-	public void setManualConnect(final boolean manual)
-	{
-		mManualConnect = manual;
-	}
-
 	public void setupBluetoothDeviceFromCache(final String address)
 	{
 		mRootService = null;
@@ -1306,6 +1281,27 @@ public class BluetoothLeIndependentService extends Service
 			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
 			setBluetoothGatt(null);
 			initPreferredDevice("");
+		}
+	}
+
+	public void cutAllConnection()
+	{
+		if(!isBluetoothEnabled())
+		{
+			appendLog("Bluetooth is not enabled");
+			LogUtil.d(TAG,"Bluetooth is not enabled",Thread.currentThread().getStackTrace());
+			return;
+		}
+
+		stopConnectThread();
+
+		setAllowConnect(false);
+
+		disconnect();
+		if(mInputDeviceProfile != null && mInputDeviceProfile.getConnectionState(mBluetoothDevice) == BluetoothProfile.STATE_CONNECTED)
+		{
+			appendLog("closeBTConnection");
+			closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
 		}
 	}
 
@@ -1511,8 +1507,6 @@ public class BluetoothLeIndependentService extends Service
 
 						// After init finished, must remove timeout task
 						removeTaskTimeout(); // Remove connect timeout runnable
-
-						mManualConnect = false;
 
 						// After connecting and verified, add device to cache list
 						addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
@@ -1744,7 +1738,7 @@ public class BluetoothLeIndependentService extends Service
 	}
 
 	// init a connection
-	// Maybe a Connect or a Bonding
+	// Maybe a Connect or a Bonding, called by TabActivity
 	public void initConnectDevice(final String address)
 	{
 		// init mBluetoothDevice , get device from adapter
@@ -1775,6 +1769,8 @@ public class BluetoothLeIndependentService extends Service
 	public void connectDevice(final String address)
 	{
 		LogUtil.d(TAG,"[Process] connectDevice address : "+address,Thread.currentThread().getStackTrace());
+
+		setAllowConnect(true); //connectDevice
 
 		// init mBluetoothDevice , get device from adapter
 		initPreferredDevice(address);
@@ -1822,6 +1818,9 @@ public class BluetoothLeIndependentService extends Service
 	public void bondingDevice(final String address)
 	{
 		initPreferredDevice(address);
+
+		setAllowConnect(true); //bondingDevice
+
 		if(!isBluetoothAvailable())
 		{
 			return;
@@ -2064,21 +2063,37 @@ public class BluetoothLeIndependentService extends Service
 
 				return;
 			}
+			
+			if(!mAllowConnect)
+			{
+				LogUtil.e(TAG, "Not allow binding.",Thread.currentThread().getStackTrace());
+				return;
+			}
 
 			broadcastNotifyUi(getConnectStatusIntent(CONNECTION_STATE_BINDING));
 			mConnectionState = BluetoothProfile.STATE_CONNECTING;
 			setupTaskTimeout(TASK_BIND,10*1000);
 
 			// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-			setBluetoothGatt(mBluetoothDevice.connectGatt(context, false, mGattCallback));
-
-			mAllowReBind = true;
+			mHandler.post(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					setBluetoothGatt(mBluetoothDevice.connectGatt(context, false, mGattCallback));
+				}
+			});
 		}
 		catch (Exception e)
 		{
 			mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
 			LogUtil.e(TAG, e.toString(), Thread.currentThread().getStackTrace());
 		}
+	}
+
+	public void setAllowConnect(final boolean allowConnect)
+	{
+		mAllowConnect = allowConnect;
 	}
 
 
@@ -2088,10 +2103,8 @@ public class BluetoothLeIndependentService extends Service
 	 * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
 	 * callback.
 	 */
-	public void disconnect(final boolean reBind)
+	public void disconnect()
 	{
-		mAllowReBind = reBind;
-
 		if (initialize() == false)
 		{
 			LogUtil.e(TAG, "[Error] BluetoothAdapter not initialized", Thread.currentThread().getStackTrace());
@@ -2288,20 +2301,6 @@ public class BluetoothLeIndependentService extends Service
 		return getBluetoothGatt().getServices();
 	}
 
-	private void readDeviceNameFromServiceWithTimer()
-	{
-		readDeviceNameFromService();
-
-		settingTaskTimeoutTimer(); // getDeviceNameFromService
-	}
-
-	private void startListeningWithTimer()
-	{
-		startListening();
-
-		settingTaskTimeoutTimer(); //startListening
-	}
-
 	private void startListening()
 	{
 		if(getNotifyGattCharacteristic(getRootService()) != null)
@@ -2387,15 +2386,6 @@ public class BluetoothLeIndependentService extends Service
 	//*****************************************************************//
 	//  Process flow function                                          //
 	//*****************************************************************//
-	private void packetIdNotMatch(final byte initId, final byte followerId)
-	{
-		final String message = String.format("Initiator ID =  0x02X , Follower ID =  0x02X", initId, followerId);
-		LogUtil.d(TAG, message, null);
-		appendLog(formatErrorString(message));
-		disconnect(true);
-	}
-
-
 	private void settingRssiTimer()
 	{
 		settingRssiTimer(READ_RSSI_INTERVAL);
@@ -2412,28 +2402,6 @@ public class BluetoothLeIndependentService extends Service
 	private void cancelRssiTimer()
 	{
 		mHandler.removeCallbacks(readRssiRunnable);
-	}
-
-	private void settingTaskTimeoutTimer(final long timeout)
-	{
-		mTaskRetry = 0;
-		cancelTaskTimeoutTimer(); //settingTaskTimeoutTimer
-		mHandler.postDelayed(taskRetryRunnable, timeout);
-	}
-
-	private void settingTaskTimeoutTimer()
-	{
-		settingTaskTimeoutTimer(TIMEOUT_TASK_RETRY);
-	}
-
-	private void cancelTaskTimeoutTimer()
-	{
-		mHandler.removeCallbacks(taskRetryRunnable);
-	}
-
-	private void handleTaskTimeout()
-	{
-		mHandler.postDelayed(taskRetryRunnable, TIMEOUT_TASK_RETRY);
 	}
 
 	private void handleBleConnect()
@@ -2467,7 +2435,7 @@ public class BluetoothLeIndependentService extends Service
 			}
 			else
 			{
-				disconnect(true); // BleService is not null
+				disconnect(); // BleService is not null
 			}
 		}
 		catch (Exception e)
@@ -2503,61 +2471,60 @@ public class BluetoothLeIndependentService extends Service
 
 			closeGatt();
 			cancelRssiTimer();
-			cancelTaskTimeoutTimer();	//handleBleDisconnect
 
 			broadcastNotifyUi(getGattIntent(PARAM_GATT_DISCONNECTED));
 
 			mDeviceInitState = INIT_STATE_NONE;
 
-			// if allowReConnect is false, skip
-			if(!mAutoConnectOnDisconnect || !mAllowReBind)
+			if( !mAllowConnect)
 			{
 				mHandler.removeCallbacksAndMessages(null);
+				LogUtil.d(TAG,"Not allow re-binding",Thread.currentThread().getStackTrace());
 				return;
 			}
 
-			mAllowReBind = false;
-
-			// Allow to re-connect under limit
-			if(mBluetoothDevice != null && mBindRetry++ < TASK_BIND_RETRY_MAX)
+			// Delay 300ms to check ACL state, because GATT state is normal taster than ACL message
+			mHandler.postDelayed(new Runnable()
 			{
-				if(isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
+				@Override
+				public void run()
 				{
-					mHandler.postDelayed(new Runnable()
+					if(isBluetoothDeviceConnected(mBluetoothDevice.getAddress()))
 					{
-						@Override
-						public void run()
+						// Allow to re-connect under limit
+						if(mBluetoothDevice != null && mBindRetry++ < TASK_BIND_RETRY_MAX)
 						{
-							LogUtil.d(TAG,"Re-binding, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
-							_bind(); //handleBleDisconnect
+							mHandler.postDelayed(new Runnable()
+							{
+								@Override
+								public void run()
+								{
+									LogUtil.d(TAG, "Re-binding, retry:" + mBindRetry, Thread.currentThread().getStackTrace());
+									_bind(); //handleBleDisconnect
+								}
+							}, 2000);
 						}
-					},2000);
+					}
+					// Do not call bond from bind function
+//					else
+//					{
+//						mHandler.postDelayed(new Runnable()
+//						{
+//							@Override
+//							public void run()
+//							{
+//								LogUtil.d(TAG,"Re-connect, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
+//								_connect(); //handleBleDisconnect
+//							}
+//						},2000);
+//					}
 				}
-				else
-				{
-					mHandler.postDelayed(new Runnable()
-					{
-						@Override
-						public void run()
-						{
-							LogUtil.d(TAG,"Re-connect, retry:"+mBindRetry,Thread.currentThread().getStackTrace());
-							_connect(); //handleBleDisconnect
-						}
-					},2000);
-				}
-			}
+			},300);
 		}
 		catch (Exception e)
 		{
 			LogUtil.e(TAG, e.toString(),Thread.currentThread().getStackTrace());
 		}
-	}
-
-	private void discoverServicesWithTimer()
-	{
-		discoverServices();
-
-		settingTaskTimeoutTimer(); // discoverServices
 	}
 
 	private void discoverServices()
@@ -2585,7 +2552,7 @@ public class BluetoothLeIndependentService extends Service
 									{
 										LogUtil.e(TAG, "[Connection] mBluetoothGatt is null !!!",Thread.currentThread().getStackTrace());
 										appendLog(formatErrorString("mBluetoothGatt is null !!!"));
-										disconnect(true); //mBluetoothGatt is null
+										disconnect(); //mBluetoothGatt is null
 									}
 								}
 								catch (Exception e)
@@ -2684,7 +2651,6 @@ public class BluetoothLeIndependentService extends Service
 					broadcastNotifyUi(getProcessStepIntent(INIT_STATE_TEST_SUCCESS));
 
 					mDeviceInitState = INIT_STATE_END;
-					mManualConnect = false;
 
 					// After connecting and verified, add device to cache list
 					addBluetoothDeviceToCache(mBluetoothDevice,getBluetoothGatt());
@@ -2752,26 +2718,20 @@ public class BluetoothLeIndependentService extends Service
 					if(mSlbleCommand != null)
 					{
 						final int parameter = receiveData[FIELD_PARAMETER] & 0xFF;
-						mSlbleCommand.state = parameter;
 						LogUtil.d(TAG,String.format("notifyCommandState - STATE"),Thread.currentThread().getStackTrace());
-						notifyCommandState(mSlbleCommand); // STATE change
+
 						switch (parameter)
 						{
 							case PARAM_ACCEPT_COMMAND:
-							{
-
-							}
-							break;
 							case PARAM_COMMAND_PROCESSING:
-							{
-
-							}
-							break;
 							case PARAM_REJECT_COMMAND:
 							{
+								mSlbleCommand.state = parameter;
 								stopCommandThread();
+								notifyCommandState(mSlbleCommand); // STATE change
+								break;
 							}
-							break;
+							default:
 						}
 					}
 				}
@@ -3067,7 +3027,8 @@ public class BluetoothLeIndependentService extends Service
 							if(mSlbleCommand != null && mSlbleCommand.currentTimes == times && mSlbleCommand.data == null)
 							{
 								LogUtil.d(TAG,String.format("notifyCommandState - THREAD"),Thread.currentThread().getStackTrace());
-								notifyCommandState(mSlbleCommand); // Send finish
+								mSlbleCommand.state = -2; // timeout
+								notifyCommandState(mSlbleCommand); // Command timeout
 							}
 						}
 					}
@@ -4143,6 +4104,14 @@ public class BluetoothLeIndependentService extends Service
 			}
 		}
 
+		if(mDeviceInitState == INIT_STATE_BONDING)
+		{
+			LogUtil.d(TAG,"Disconnect during bonding, bond failed",Thread.currentThread().getStackTrace());
+			appendLog("Bonding failed, disconnected");
+			removeTaskTimeout();
+			return;
+		}
+
 		// When receiving ACL_DISCONNECTED message
 		// Check if we are in bonding process, if yes , start connect now
 		if(mDeviceInitState == INIT_STATE_BOND_TO_CONNECT)
@@ -4156,12 +4125,29 @@ public class BluetoothLeIndependentService extends Service
 			mDeviceInitState = INIT_STATE_BOND_OK;
 			//closeBTConnection(bluetoothDevice.getAddress());
 
-			_connect(); //removeConnectedBluetoothDevice
+
+			LogUtil.d(TAG,"Disconnect after bonding success, start connect",Thread.currentThread().getStackTrace());
+			mHandler.postDelayed(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					_connect(); //removeConnectedBluetoothDevice
+				}
+			},500);
+
 			return;
 		}
 
-		if(!mAutoConnectOnDisconnect || !mAllowReBind)
+		if(!mAllowConnect)
 		{
+			LogUtil.d(TAG,"Block any connection",Thread.currentThread().getStackTrace());
+			return;
+		}
+
+		if(!mAutoConnectOnDisconnect)
+		{
+			LogUtil.d(TAG,"Auto connect not enabled",Thread.currentThread().getStackTrace());
 			return;
 		}
 
@@ -4201,7 +4187,7 @@ public class BluetoothLeIndependentService extends Service
 		else
 		{
 			LogUtil.d(TAG,"Gatt is still connected, disconnect first",Thread.currentThread().getStackTrace());
-			disconnect(false);
+			disconnect();
 		}
 	}
 
@@ -4306,7 +4292,8 @@ public class BluetoothLeIndependentService extends Service
 				final CachedBluetoothDevice cachedBluetoothDevice = mCachedDeviceList.get(i);
 				if(mBluetoothDevice != null && mBluetoothDevice.getAddress().equals(cachedBluetoothDevice.bluetoothDevice.getAddress()))
 				{
-					disconnect(false);
+					setAllowConnect(false);
+					disconnect();
 				}
 				else
 				{
@@ -4326,7 +4313,8 @@ public class BluetoothLeIndependentService extends Service
 	{
 		stopConnectThread();
 
-		disconnect(false);  //MODE_BLE_DISCONNECT
+		setAllowConnect(false);
+		disconnect();  //MODE_BLE_DISCONNECT
 
 		if(mInputDeviceProfile != null && mInputDeviceProfile.getConnectionState(mBluetoothDevice) == BluetoothProfile.STATE_CONNECTED)
 		{

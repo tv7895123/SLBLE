@@ -377,19 +377,41 @@
                     <!--android:text="Send"/>-->
             <!--</LinearLayout>-->
         </LinearLayout>
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Command："/>
+            <EditText android:id="@+id/edit_custom_command" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:inputType="numberDecimal" android:text=""/>
+            <Button
+                    android:id="@+id/btn_send_custom_command"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:text="Send"/>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:layout_marginTop="20dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:visibility="gone">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
-                <TextView android:layout_width="120dp" android:layout_height="wrap_content" android:text="Re-send Interval："/>
-                <EditText android:id="@+id/edit_resend_interval" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="200"/>
+                <TextView android:layout_width="120dp" android:layout_height="wrap_content" android:text="Ack Timeout："/>
+                <EditText android:id="@+id/edit_ack_timeout" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="200"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ms"/>
             </LinearLayout>
             <LinearLayout
@@ -398,6 +420,14 @@
                     android:orientation="horizontal">
                 <TextView android:layout_width="120dp" android:layout_height="wrap_content" android:text="Max re-send："/>
                 <EditText android:id="@+id/edit_resend_times" android:layout_width="80dp" android:layout_height="wrap_content"  android:inputType="numberDecimal" android:text="5"/>
+            </LinearLayout>
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                <TextView android:layout_width="120dp" android:layout_height="wrap_content" android:text="Csta Timeout："/>
+                <EditText android:id="@+id/edit_csta_timeout" android:layout_width="80dp" android:layout_height="wrap_content" android:inputType="numberDecimal" android:text="30"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="s"/>
             </LinearLayout>
             <LinearLayout
                     android:layout_width="match_parent"

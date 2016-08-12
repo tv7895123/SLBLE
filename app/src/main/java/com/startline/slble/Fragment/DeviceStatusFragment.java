@@ -61,8 +61,10 @@ public class DeviceStatusFragment extends Fragment
 	private ImageView imgPBrake = null;
 	private ImageView imgHBrake = null;
 	private ImageView imgHijack = null;
+	private EditText editCustomCommand = null;
 	private EditText editCommand = null;
-	private EditText editInterval = null;
+	private EditText editAckTimeout = null;
+	private EditText editCstaTimeout = null;
 	private EditText editMaxReSendTimes = null;
 	private EditText editTimes = null;
 	private ImageView imgConnectStatus = null;
@@ -111,8 +113,10 @@ public class DeviceStatusFragment extends Fragment
 		txtConnectStatus = (TextView)rootView.findViewById(R.id.txt_connection_status);
 		txtProcess = (TextView)rootView.findViewById(R.id.txt_process);
 
+		editCustomCommand = (EditText)rootView.findViewById(R.id.edit_custom_command);
 		editCommand = (EditText)rootView.findViewById(R.id.edit_command);
-		editInterval = (EditText)rootView.findViewById(R.id.edit_resend_interval);
+		editAckTimeout = (EditText)rootView.findViewById(R.id.edit_ack_timeout);
+		editCstaTimeout = (EditText)rootView.findViewById(R.id.edit_csta_timeout);
 		editMaxReSendTimes = (EditText)rootView.findViewById(R.id.edit_resend_times);
 		editTimes = (EditText)rootView.findViewById(R.id.edit_send_command_times);
 
@@ -125,6 +129,7 @@ public class DeviceStatusFragment extends Fragment
 		final Button btnRemoteStart = (Button)rootView.findViewById(R.id.btn_remote_start);
 		final Button btnRemoteStop = (Button)rootView.findViewById(R.id.btn_remote_stop);
 		final Button btnCheck = (Button)rootView.findViewById(R.id.btn_check);
+		final Button btnSendCustomCommand = (Button)rootView.findViewById(R.id.btn_send_custom_command);
 		final Button btnStartSendCommand = (Button)rootView.findViewById(R.id.btn_start_send_command);
 		final Button btnStopSendCommand = (Button)rootView.findViewById(R.id.btn_stop_send_command);
 		final View.OnClickListener btnOnCLick = new View.OnClickListener()
@@ -141,6 +146,7 @@ public class DeviceStatusFragment extends Fragment
 		btnRemoteStart.setOnClickListener(btnOnCLick);
 		btnRemoteStop.setOnClickListener(btnOnCLick);
 		btnCheck.setOnClickListener(btnOnCLick);
+		btnSendCustomCommand.setOnClickListener(btnOnCLick);
 		btnStartSendCommand.setOnClickListener(btnOnCLick);
 		btnStopSendCommand.setOnClickListener(btnOnCLick);
 	}
@@ -190,15 +196,32 @@ public class DeviceStatusFragment extends Fragment
 				command = CONTROL_ALARM_CHECK_CAR_STATUS;
 			}
 			break;
+			case R.id.btn_send_custom_command:
+			{
+				final String strCmd = editCustomCommand.getText().toString();
+				if(strCmd.isEmpty())
+					return;
+
+				try
+				{
+					command = Integer.parseInt(strCmd);
+				}
+				catch (Exception e)
+				{
+
+				}
+			}
+			break;
 			case R.id.btn_start_send_command:
 			{
 				if(mThreadSendCommand != null)
 					return;
 
 				final String strCmd = editCommand.getText().toString();
-				final String strInterval = editInterval.getText().toString();
+				final String strInterval = editAckTimeout.getText().toString();
 				final String strMaxResend = editMaxReSendTimes.getText().toString();
 				final String strTimes = editTimes.getText().toString();
+				final String strCstaTimeout = editCstaTimeout.getText().toString();
 				if(strCmd.isEmpty())
 					return;
 				if(strInterval.isEmpty())
@@ -207,6 +230,8 @@ public class DeviceStatusFragment extends Fragment
 					return;
 				if(strTimes.isEmpty())
 					return;
+				if(strCstaTimeout.isEmpty())
+					return;
 
 				try
 				{
@@ -214,6 +239,7 @@ public class DeviceStatusFragment extends Fragment
 					final int intInterval = Integer.parseInt(strInterval);
 					final int intReSend = Integer.parseInt(strMaxResend);
 					final int totalTimes = Integer.parseInt(strTimes);
+					final int cstaTimeout = Integer.parseInt(strCstaTimeout);
 					//sendCommand(intCmd);
 
 					mThreadSendCommand = new Thread(new Runnable()
@@ -222,11 +248,13 @@ public class DeviceStatusFragment extends Fragment
 						public void run()
 						{
 							mSendTimes = 0;
+							mReceiveTimes = 0;
+							long sendCmdTimestamp = 0;
 							while(mSendTimes < totalTimes)
 							{
 								try
 								{
-									if(!mWaitResponse)
+									if(!mWaitResponse || (System.currentTimeMillis()-sendCmdTimestamp) > cstaTimeout*1000)
 									{
 										mWaitResponse = true;
 										mSendTimes++;
@@ -238,6 +266,7 @@ public class DeviceStatusFragment extends Fragment
 												txtSendTimes.setText(String.valueOf(mSendTimes));
 											}
 										});
+										sendCmdTimestamp = System.currentTimeMillis();
 										sendCommand(intCmd,intInterval,intReSend);
 									}
 
@@ -245,9 +274,11 @@ public class DeviceStatusFragment extends Fragment
 								}
 								catch (Exception e)
 								{
-
+									break;
 								}
 							}
+
+							mThreadSendCommand = null;
 						}
 					});
 
@@ -359,15 +390,15 @@ public class DeviceStatusFragment extends Fragment
 		intent.putExtra("times", times);
 		sendToService(intent);
 
-		mHandler.post(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				mProgressDialog.setMessage("Waiting ACK...");
-				mProgressDialog.show();
-			}
-		});
+//		mHandler.post(new Runnable()
+//		{
+//			@Override
+//			public void run()
+//			{
+//				mProgressDialog.setMessage("Waiting ACK...");
+//				mProgressDialog.show();
+//			}
+//		});
 	}
 
 	private void stopSendCommand()
@@ -380,6 +411,7 @@ public class DeviceStatusFragment extends Fragment
 		{
 			mThreadSendCommand.interrupt();
 		}
+		mWaitResponse = false;
 		mThreadSendCommand = null;
 	}
 
@@ -419,18 +451,11 @@ public class DeviceStatusFragment extends Fragment
 		if(slbleCommand.data != null)
 		{
 			mWaitResponse = false;
+			mReceiveTimes++;
+			txtReceiveTimes.setText(String.valueOf(mReceiveTimes));
 			displayDeviceStatus(0,(long)slbleCommand.data);
 			mProgressDialog.dismiss();
 			Toast.makeText(context,"Control success",Toast.LENGTH_SHORT).show();
-			return;
-		}
-
-		// Reach MAX retry
-		if(slbleCommand.currentTimes == slbleCommand.maxTimes)
-		{
-			mWaitResponse = false;
-			mProgressDialog.dismiss();
-			Toast.makeText(context,"Control fail",Toast.LENGTH_SHORT).show();
 			return;
 		}
 
@@ -442,23 +467,42 @@ public class DeviceStatusFragment extends Fragment
 			{
 				mProgressDialog.dismiss();
 				Toast.makeText(context,"Command fail.", Toast.LENGTH_SHORT).show();
+				return;
 			}
-			break;
 
+			// Accept command
 			case PARAM_ACCEPT_COMMAND:
-			case PARAM_COMMAND_PROCESSING:
 			{
 				mProgressDialog.setMessage("Waiting CSTA...");
 			}
 			break;
 
-			case PARAM_REJECT_COMMAND:
+			case PARAM_COMMAND_PROCESSING:
 			{
-				mProgressDialog.dismiss();
-				Toast.makeText(context,"Command reject.", Toast.LENGTH_SHORT).show();
+				mProgressDialog.setMessage("Please wait previous command finish");
 			}
 			break;
+
+			// Already processing this command
+			case PARAM_REJECT_COMMAND:
+			{
+				mProgressDialog.setMessage("Waiting CSTA...");
+			}
+			break;
+
+			default:
+			{
+				// Reach MAX retry
+				if(slbleCommand.currentTimes == slbleCommand.maxTimes)
+				{
+					mWaitResponse = false;
+					mProgressDialog.dismiss();
+					Toast.makeText(context,"Control fail",Toast.LENGTH_SHORT).show();
+				}
+			}
 		}
+
+
 	}
 
 	public void updateProcess(final String message)
@@ -499,12 +543,6 @@ public class DeviceStatusFragment extends Fragment
 		if(csta < 0)
 		{
 			return;
-		}
-
-		if(mThreadSendCommand != null)
-		{
-			mReceiveTimes++;
-			txtReceiveTimes.setText(String.valueOf(mReceiveTimes));
 		}
 
 		switch (mode)

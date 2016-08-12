@@ -18,7 +18,6 @@ import android.view.View;
 import android.widget.*;
 import com.startline.slble.Adapter.BleSerializableDeviceAdapter;
 import com.startline.slble.BuildConfig;
-import com.startline.slble.PureClass.Constants;
 import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 
@@ -305,20 +304,11 @@ public class DeviceListActivity extends Activity
 						{
 							// If unbond device is connected with App, disconnect and close GATT to release it
 							final BluetoothLeIndependentService.CachedBluetoothDevice cachedBluetoothDevice = service.getCachedBluetoothDevice(address);
-							if(cachedBluetoothDevice != null)
-							{
-								if(cachedBluetoothDevice.bluetoothGatt != null)
-								{
-									cachedBluetoothDevice.bluetoothGatt.disconnect();
-									cachedBluetoothDevice.bluetoothGatt.close();
-								}
-							}
-
-							// Disconnect it from HID service
 							final BluetoothDevice bluetoothDevice = service.getConnectedBluetoothDevice(address);
-							if(bluetoothDevice != null)
+							if(cachedBluetoothDevice != null || bluetoothDevice != null)
 							{
-								service.closeBTConnection(bluetoothDevice);
+								LogUtil.d(TAG,"Release all connection before un-bond",Thread.currentThread().getStackTrace());
+								service.cutAllConnection();
 							}
 						}
 					}

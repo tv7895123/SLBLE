@@ -11,7 +11,7 @@
     <string name = "disconnected">Disconnected</string>
     <string name = "auto_connecting">Auto connecting</string>
     <string name = "binding">APP connecting... </string>
-    <string name = "connecting">Bluetooth Connecting... </string>
+    <string name = "connecting">Connecting... </string>
     <string name = "connect_cancelled">Connect cancelled</string>
     <string name = "re_scanning">Re-scanning...</string>
     <string name = "device_not_found">Device not found</string>
