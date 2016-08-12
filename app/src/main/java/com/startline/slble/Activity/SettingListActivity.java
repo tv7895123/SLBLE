@@ -313,7 +313,11 @@ public class SettingListActivity extends Activity
 				modifiedSetting = copyArray(initSetting);
 
 				service.setIpcCallbackhandler(mHandler);
-				service.sendRequestBleSetting();
+
+				if(service.isDeviceInitialized())
+				{
+					service.sendRequestBleSetting();
+				}
 
 				initTypeList();
 
