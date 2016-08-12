@@ -1,0 +1,73 @@
+//*************************************************************************************************************
+//*
+//*
+//* 2016/08/05
+//*
+//*
+//*************************************************************************************************************
+
+A.Auto connect function
+  Search key word "Keyless"(CaseSentitive and Whole words) in BluetoothLeIndependentService.java
+  There are 4 sections about Keyless:
+  1. Constant variables define
+     All constants value about Keyless are defined here
+	
+  2. Limit connect times
+     Contains Screen On and Screen Off times, you can change the default value here
+
+  3. BroadcastReceiver about Screen State
+     Register a broadcast receiver to listen screen state changed
+     Assign different connect limit times depend screen state here
+     After assigning connect limit, trigger the connect function
+
+  4. Connect function
+     We create a thread to connect device in background per fixed time, default is 5sec
+     This function has a while loop to keep connecting until:
+     (1) Got an exception
+     (2) Bluetooth is disabled
+     (3) Device is connected
+     (4) Over connect limit
+
+===============================================================================================================
+B.Makes phone keep connection
+  Some phones may disconnect bluetooth connection if idle for a while
+  To register a bluetooth GATT CALLBACK can improve this situation
+  1. Register a listener for ACL messages
+     We listen ACL_CONNECTED, ACL_DISCONNECTED and STATE_CHANGED in BluetoothReceiver.java
+
+  2. When catching a ACL_CONNECTED message, start bind bluetooth with a BluetoothGattCallback by "mBluetoothDevice.connectGatt(context, false, mGattCallback)"
+
+===============================================================================================================
+C.BLE get unpaired automatically
+  1. Root Cause
+     We found this phenomena on some phones,ex Sony Z5(Android 6.0.1),Asus Zonefone4(Android 4.4)
+     Generally,it caused by APP operates a not ready bluetooth device,if the bluetooth device disconnected at a not ready state, it unpairs itself frequently  
+  
+  2. Resolve
+     
+     To prevent this issue, APP must check whether bluetooth device is ready before binding
+     Program flow¡G
+
+                                                     ready
+     _connect------>  isBluetoothDeviceConnected ----------------> _bind
+¡@¡@¡@¡@¡@     ¡ô¡@ ¡@¡@¡@¡@¡@¡@¡@¡@¡@¡@¡@¡@¡@         ¢x
+               ¢|¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢}
+                           Not Ready   
+  
+     _connect                  ¡G Try to connect bluetooth device
+
+     _bind	               ¡G Register a gattCallback to receive bluetooth notification
+
+     isBluetoothDeviceConnected¡G Get connected device list via BluetoothProfile by calling "getConnectedDeviceFromProfile(mInputDeviceProfile)"
+                                  if device is in list means it is ready to be used
+
+
+  
+
+  
+  
+
+
+      
+
+	
