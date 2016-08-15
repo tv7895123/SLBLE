@@ -242,13 +242,15 @@ public class DeviceStatusFragment extends Fragment
 					final int cstaTimeout = Integer.parseInt(strCstaTimeout);
 					//sendCommand(intCmd);
 
+					mSendTimes = 0;
+					mReceiveTimes = 0;
+					txtSendTimes.setText("0");
+					txtReceiveTimes.setText("0");
 					mThreadSendCommand = new Thread(new Runnable()
 					{
 						@Override
 						public void run()
 						{
-							mSendTimes = 0;
-							mReceiveTimes = 0;
 							long sendCmdTimestamp = 0;
 							while(mSendTimes < totalTimes)
 							{
@@ -465,6 +467,7 @@ public class DeviceStatusFragment extends Fragment
 			// Not receive response
 			case -1:
 			{
+				mWaitResponse = false;
 				mProgressDialog.dismiss();
 				Toast.makeText(context,"Command fail.", Toast.LENGTH_SHORT).show();
 				return;
@@ -492,17 +495,9 @@ public class DeviceStatusFragment extends Fragment
 
 			default:
 			{
-				// Reach MAX retry
-				if(slbleCommand.currentTimes == slbleCommand.maxTimes)
-				{
-					mWaitResponse = false;
-					mProgressDialog.dismiss();
-					Toast.makeText(context,"Control fail",Toast.LENGTH_SHORT).show();
-				}
+
 			}
 		}
-
-
 	}
 
 	public void updateProcess(final String message)

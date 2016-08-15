@@ -988,9 +988,15 @@ public class BluetoothLeIndependentService extends Service
 							final int command = intent.getIntExtra("command", 0);
 							final int interval = intent.getIntExtra("interval", 200);
 							final int times = intent.getIntExtra("times", 0);
-							sendCommand(command);
 
-							//startCommandThread(command,interval,times);
+							if(times == 0)
+							{
+								sendCommand(command);
+							}
+							else
+							{
+								startCommandThread(command,interval,times);
+							}
 						}
 						break;
 
@@ -2700,6 +2706,8 @@ public class BluetoothLeIndependentService extends Service
 			{
 				case CMD_ACK:
 				{
+					final String s = formatByteArrayToLog(receiveData);
+					LogUtil.d(TAG,"[Process] Receive Ack : " + s,Thread.currentThread().getStackTrace());
 					final int ackFlag = getAckFlag();
 					if(ackFlag>0)
 					{
@@ -3010,27 +3018,28 @@ public class BluetoothLeIndependentService extends Service
 					{
 						if((System.currentTimeMillis() - mSlbleCommand.updateTime) >= resend_interval)
 						{
-							LogUtil.d(TAG,String.format("notifyCommandState - send command %d",cmd),Thread.currentThread().getStackTrace());
-							sendCommand(cmd);
-							mSlbleCommand.currentTimes++;
-							mSlbleCommand.updateTime = System.currentTimeMillis();
+							// Re-send
+							if(mSlbleCommand.currentTimes <= times)
+							{
+								LogUtil.d(TAG,String.format("notifyCommandState - send command %d",cmd),Thread.currentThread().getStackTrace());
+								sendCommand(cmd);
+								mSlbleCommand.currentTimes++;
+								mSlbleCommand.updateTime = System.currentTimeMillis();
+							}
+							// Reach MAX re-send
+							else
+							{
+								// if re-send reach max and not receive ACK, notify command fail
+								if(mSlbleCommand != null && mSlbleCommand.currentTimes == times && mSlbleCommand.data == null)
+								{
+									LogUtil.d(TAG,String.format("notifyCommandState - THREAD"),Thread.currentThread().getStackTrace());
+									notifyCommandState(mSlbleCommand); // Command timeout
+								}
+								break;
+							}
 						}
 
 						Thread.sleep(50);
-
-						// Wait for CSTA , delay 1s
-						if(mSlbleCommand.currentTimes == times)
-						{
-							Thread.sleep(1000);
-
-							// if re-send reach max and not receive ACK, notify command fail
-							if(mSlbleCommand != null && mSlbleCommand.currentTimes == times && mSlbleCommand.data == null)
-							{
-								LogUtil.d(TAG,String.format("notifyCommandState - THREAD"),Thread.currentThread().getStackTrace());
-								mSlbleCommand.state = -2; // timeout
-								notifyCommandState(mSlbleCommand); // Command timeout
-							}
-						}
 					}
 					catch (Exception e)
 					{
