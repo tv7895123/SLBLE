@@ -99,7 +99,7 @@ public class BluetoothReceiver extends BroadcastReceiver
             final String deviceName = bluetoothDevice.getName();
             if(deviceName == null) return;
 
-            if(deviceName.equals(BluetoothLeIndependentService.KEYWORD_SLBLE))
+            if(deviceName.startsWith(BluetoothLeIndependentService.KEYWORD_SLBLE))
             {
                 handleBluetoothAclEvent(context,intent.getAction(),bluetoothDevice);
             }

@@ -461,6 +461,7 @@ public class BluetoothLeIndependentService extends Service
 								}
 							},500);
 						}
+						else
 						// Wait or make a disconnection after bonded for some mobile phones
 						{
 
@@ -726,7 +727,7 @@ public class BluetoothLeIndependentService extends Service
 
 						broadcastNotifyUi(getGattIntent(PARAM_GATT_READ_DEVICE_NAME));
 
-						if(!deviceName.equals(KEYWORD_SLBLE))
+						if(!deviceName.startsWith(KEYWORD_SLBLE))
 						{
 							appendLog(formatConnectionString("Unsupported device !!!"));
 							//disconnect(false);  //Unsupported device
