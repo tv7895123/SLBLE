@@ -57,9 +57,6 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 		{
 			mBleDeviceList.add(bluetoothDeviceRssi);
 		}
-
-		if(mBleDeviceList.size()>1)
-			quickSort(mBleDeviceList,0,mBleDeviceList.size()-1);
 	}
 
 	public BleDeviceRssi getDevice(int position)
@@ -88,6 +85,44 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 	public long getItemId(int i)
 	{
 		return i;
+	}
+
+	public boolean isContainDevice(final String address)
+	{
+		if(mBleDeviceList == null || mBleDeviceList.size() == 0)
+			return false;
+
+		for(int i=0;i<mBleDeviceList.size();i++)
+		{
+			final BleDeviceRssi device = mBleDeviceList.get(i);
+			if(device.bluetoothDevice.getAddress().equals(address))
+				return true;
+		}
+
+		return false;
+	}
+
+	public long getDeviceUpdateTime(final String address)
+	{
+		if(mBleDeviceList == null || mBleDeviceList.size() == 0)
+			return -1;
+
+		for(int i=0;i<mBleDeviceList.size();i++)
+		{
+			final BleDeviceRssi device = mBleDeviceList.get(i);
+			if(device.bluetoothDevice.getAddress().equals(address))
+			{
+				return System.currentTimeMillis()-device.createdTime;
+			}
+		}
+
+		return -1;
+	}
+
+	public void sortList()
+	{
+		if(mBleDeviceList.size()>1)
+			quickSort(mBleDeviceList,0,mBleDeviceList.size()-1);
 	}
 
 
@@ -163,9 +198,37 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 
 	private void quickSort(ArrayList<BleDeviceRssi> list,final int indexLeft, final int indexRight)
 	{
+		//--------------------------------------------------------------------------------------------------------------
+		// middle pivot
+		//--------------------------------------------------------------------------------------------------------------
+		//*
 		if(indexLeft >= indexRight)
 			return;
+		int pivotIndex = (indexLeft+indexRight)/2;
+		BleDeviceRssi pivot = list.get(pivotIndex);
+		swap(list, pivotIndex, indexRight);
+		int swapIndex = indexLeft;
+		for (int i = indexLeft; i < indexRight; ++i)
+		{
+			if (list.get(i).rssi >= pivot.rssi)
+			{
+				swap (list, i, swapIndex);
+				++swapIndex;
+			}
+		}
+		swap(list, swapIndex, indexRight);
 
+		quickSort(list, indexLeft, swapIndex - 1);
+		quickSort(list, swapIndex + 1, indexRight);
+		//*/
+
+
+		//--------------------------------------------------------------------------------------------------------------
+		// Left pivot
+		//--------------------------------------------------------------------------------------------------------------
+		/*
+		if(indexLeft >= indexRight)
+			return;
 
 		int i, j;
 		BleDeviceRssi pivot = list.get(indexLeft);
@@ -202,5 +265,6 @@ public class BleDeviceRssiAdapter extends BaseAdapter
 		swap(list,indexLeft, j);
 		quickSort(list, indexLeft, j - 1);
 		quickSort(list, j + 1, indexRight);
+		//*/
 	}
 }
