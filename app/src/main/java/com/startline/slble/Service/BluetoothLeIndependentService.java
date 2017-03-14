@@ -58,7 +58,8 @@ public class BluetoothLeIndependentService extends Service
 	public static final int DEBUG_MODE = DEBUG_SHOW_ADV_DATA;
 
 	// Record ADV Data
-	private final String SHOW_ADV_DATA_ADDRESS = "48:36:5F:00:00:FF";
+	private final String SHOW_ADV_DATA_ADDRESS_1 = "48:36:5F:00:00:00";
+	private final String SHOW_ADV_DATA_ADDRESS_2 = "48:36:5F:22:22:22";
 
 	//=================================================================//
 	//																   //
@@ -444,35 +445,55 @@ public class BluetoothLeIndependentService extends Service
 
 					if(mBluetoothGatt == null)
 					{
-						// To indicate that we are at the state between BONDED and CONNECT
-						mDeviceInitState = INIT_STATE_BOND_TO_CONNECT;
-
-						if(mRunnableBondToConnect != null)
+						// Direct connect after bonded
+						if(true)
 						{
-							mHandler.removeCallbacks(mRunnableBondToConnect);
-							mRunnableBondToConnect = null;
-						}
+							mDeviceInitState = INIT_STATE_BOND_OK;
 
+							createBTConnection();
 
-						// Action when not receiving ACL_DISCONNECT after bonding success
-						mRunnableBondToConnect = new Runnable()
-						{
-							@Override
-							public void run()
+							mHandler.postDelayed(new Runnable()
 							{
-								LogUtil.d(TAG,"mRunnableBondToConnect",Thread.currentThread().getStackTrace());
-								// Timeout and disconnect, wait next connected
-								if(mBluetoothDevice != null && mInputDeviceProfile != null)
+								@Override
+								public void run()
 								{
-									closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
+									_connect();
 								}
-							}
-						};
+							},500);
+						}
+						// Wait or make a disconnection after bonded for some mobile phones
+						{
 
-						// Some phones may DISCONNECT from BluetoothDevice after bonding, but some may not
-						// This is for phones which won't receive DISCONNECT message.
-						// So I set a timer to continue connecting
-						mHandler.postDelayed(mRunnableBondToConnect,TIMEOUT_BOND_TO_DISCONNECT);
+							// To indicate that we are at the state between BONDED and CONNECT
+							mDeviceInitState = INIT_STATE_BOND_TO_CONNECT;
+
+							if(mRunnableBondToConnect != null)
+							{
+								mHandler.removeCallbacks(mRunnableBondToConnect);
+								mRunnableBondToConnect = null;
+							}
+
+
+							// Action when not receiving ACL_DISCONNECT after bonding success
+							mRunnableBondToConnect = new Runnable()
+							{
+								@Override
+								public void run()
+								{
+									LogUtil.d(TAG,"mRunnableBondToConnect",Thread.currentThread().getStackTrace());
+									// Timeout and disconnect, wait next connected
+									if(mBluetoothDevice != null && mInputDeviceProfile != null)
+									{
+										closeBTConnection(mInputDeviceProfile,mBluetoothDevice);
+									}
+								}
+							};
+
+							// Some phones may DISCONNECT from BluetoothDevice after bonding, but some may not
+							// This is for phones which won't receive DISCONNECT message.
+							// So I set a timer to continue connecting
+							mHandler.postDelayed(mRunnableBondToConnect,TIMEOUT_BOND_TO_DISCONNECT);
+						}
 					}
 				}
 				else if (previousBondState == BluetoothDevice.BOND_BONDING && bondState == BluetoothDevice.BOND_NONE)
@@ -537,6 +558,9 @@ public class BluetoothLeIndependentService extends Service
 				// Stop scan, remove expired device then notify UI activity to display devices
 				stopScan();
 				mBleDeviceRssiAdapter.removeUnavailableDevice();
+				long start = System.currentTimeMillis();
+				mBleDeviceRssiAdapter.sortList();
+				LogUtil.d(TAG,String.format("Sort list cost %d ms",System.currentTimeMillis()-start),Thread.currentThread().getStackTrace());
 				//broadcastNotifyUi(getScanResultIntent());
 				notifyScanResult();
 				mHandler.postDelayed(scanDeviceRunnable, SCAN_INTERVAL_MS);
@@ -864,14 +888,26 @@ public class BluetoothLeIndependentService extends Service
 			{
 				if((DEBUG_MODE & DEBUG_SHOW_ADV_DATA) > 0)
 				{
-					if(device.getAddress().equals(SHOW_ADV_DATA_ADDRESS))
+					if(device.getAddress().equals(SHOW_ADV_DATA_ADDRESS_1) || device.getAddress().equals(SHOW_ADV_DATA_ADDRESS_2))
 					{
 						final Intent intent = new Intent(ACTION_DEBUG_SERVICE_TO_UI);
 						intent.putExtra("param",PARAM_ADV_DATA);
+						intent.putExtra("address",device.getAddress());
 						intent.putExtra("adv_data",scanRecord);
 						broadcastIntent(intent);
 					}
 				}
+
+				if(!mScanning)
+					return;
+
+				if(!device.getAddress().startsWith(FILTER_ADDRESS))
+					return;
+
+				final long updateTime = mBleDeviceRssiAdapter.getDeviceUpdateTime(device.getAddress());
+				LogUtil.d(TAG,String.format("Address = %s, UpdateTime = %d",device.getAddress(), updateTime),Thread.currentThread().getStackTrace());
+				if(updateTime >= 0 && updateTime <= 200)
+					return;
 
 
 				// Decode device name
@@ -894,7 +930,9 @@ public class BluetoothLeIndependentService extends Service
 
 				// Add scanned device into list
 				if(device.getAddress().startsWith(FILTER_ADDRESS))
+				{
 					mBleDeviceRssiAdapter.addDevice(device, nameUTF8, rssi);
+				}
 			}
 			catch (Exception e)
 			{
@@ -2702,7 +2740,7 @@ public class BluetoothLeIndependentService extends Service
 		try
 		{
 			final int command = receiveData[FIELD_COMMAND] & 0xFF;
-			switch (command)
+			switch (receiveData[FIELD_COMMAND])
 			{
 				case CMD_ACK:
 				{
@@ -3334,7 +3372,6 @@ public class BluetoothLeIndependentService extends Service
 									programData.subAddressHigh = add[0];
 									programData.subAddressLow = add[1];
 
-
 									if(mCurrentTask.taskCommand == CMD_PROGRAM_INTERFACE)
 									{
 										// Into Program mode
@@ -3363,7 +3400,6 @@ public class BluetoothLeIndependentService extends Service
 											sendProgramTablePacket(PARAM_WRITE_PROGRAM_DATA,add[0],add[1],length,data);
 										}
 									}
-
 
 									mCurrentTask.state = TaskObject.STATE_WAIT;
 									mCurrentTask.updateTime = System.currentTimeMillis();
