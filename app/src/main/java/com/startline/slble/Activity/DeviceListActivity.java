@@ -66,7 +66,7 @@ public class DeviceListActivity extends Activity
 	private Button btnStop = null;
 	private Button btnTerminateTestMode = null;
 	private CheckBox cbTestMode = null;
-	private TextView txtAdvData = null;
+	private TextView txtAdvData1,txtAdvData2 = null;
 	private TextView txtVersion = null;
 	private TextView txtTestModeMessage = null;
 	private ListView listViewScan = null;
@@ -129,9 +129,14 @@ public class DeviceListActivity extends Activity
 						txt = txt + String.format("%02X  ",advData[i]);
 					}
 
-					if(txtAdvData != null)
+					final String address = intent.getStringExtra("address");
+					if(txtAdvData1 != null && address.contains("22:22:22"))
 					{
-						txtAdvData.setText(txt);
+						txtAdvData1.setText(txt);
+					}
+					else if(txtAdvData2 != null && address.contains("00:00:00"))
+					{
+						txtAdvData2.setText(txt);
 					}
 				}
             }
@@ -594,7 +599,8 @@ public class DeviceListActivity extends Activity
 
 
 
-			txtAdvData = (TextView)findViewById(R.id.txt_adv_data);
+			txtAdvData1 = (TextView)findViewById(R.id.txt_adv_data_1);
+			txtAdvData2 = (TextView)findViewById(R.id.txt_adv_data_2);
 		}
 		catch (Exception e)
 		{

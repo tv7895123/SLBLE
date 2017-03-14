@@ -38,11 +38,28 @@
         <CheckBox android:id="@+id/cb_test_mode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Test Mode"/>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/txt_adv_data"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_below="@id/layout_btn"/>
+        android:layout_height="wrap_content"
+        android:layout_below="@id/layout_btn">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/txt_adv_data_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""/>
+
+            <TextView
+                android:id="@+id/txt_adv_data_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""/>
+        </LinearLayout>
+    </ScrollView>
+
 
     <LinearLayout
         android:id="@+id/layout_scan"
