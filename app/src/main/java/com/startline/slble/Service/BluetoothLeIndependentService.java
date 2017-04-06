@@ -1392,8 +1392,8 @@ public class BluetoothLeIndependentService extends Service
 			try
 			{
 				JSONObject jsonObject = new JSONObject(appSetting);
-				setAutoConnectOnDisconnect(jsonObject.get(getString(R.string.title_auto_connect)) == 1);
-				setAutoScroll(jsonObject.get(getString(R.string.title_auto_scroll)) == 1);
+				setAutoConnectOnDisconnect((int)jsonObject.get(getString(R.string.title_auto_connect)) == 1);
+				setAutoScroll((int)jsonObject.get(getString(R.string.title_auto_scroll)) == 1);
 				//setAutoTest(jsonObject.get(getString(R.string.title_auto_send_test)) == 1);
 			}
 			catch (Exception e)
