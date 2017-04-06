@@ -23,6 +23,7 @@ import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 import com.startline.slble.Util.DialogUtil;
 import com.startline.slble.Util.LogUtil;
+import com.startline.slble.module.BleConfiguration;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -45,7 +46,7 @@ public class SettingListActivity extends Activity
 	private int[] descriptionArray = null;
 	private int selectPosition = -1;
 	private byte[] initSetting = null;
-	private byte[] modifiedSetting = null;
+	private BleConfiguration mBleConfiguration = null;
 
 	private List<Integer> mTypeList = null;
 
@@ -125,17 +126,17 @@ public class SettingListActivity extends Activity
 					if(msg.arg2 == SlbleProtocol.PARAM_SETTING_RESPONSE)
 					{
 						initSetting = (byte[])msg.obj;
-						modifiedSetting = copyArray(initSetting);
+						mBleConfiguration.setSetting(copyArray(initSetting));
 						updateListAdapter(true);
 						refreshMenu();
 					}
 					else if(msg.arg2 == SlbleProtocol.PARAM_SETTING_WRITE)
 					{
 						final byte[] data = (byte[])msg.obj;
-						if(isEqual(data,modifiedSetting))
+						if(isEqual(data,mBleConfiguration.getSetting()))
 						{
 							initSetting = (byte[])msg.obj;
-							modifiedSetting = copyArray(initSetting);
+							mBleConfiguration.setSetting(copyArray(initSetting));
 							updateListAdapter(true);
 							refreshMenu();
 						}
@@ -264,7 +265,7 @@ public class SettingListActivity extends Activity
 						return;
 					}
 
-					final int level = modifiedSetting[1] & 0x0F;
+					final int level = mBleConfiguration.getKeylessLock();
 					customPickDialog(getString(title),KEYLESS_LEVEL,level);
 				}
 				else if(title == R.string.title_tx_power_keyless_unlock)
@@ -275,7 +276,7 @@ public class SettingListActivity extends Activity
 						return;
 					}
 
-					final int level = (modifiedSetting[1] & 0xF0)>>4;
+					final int level = mBleConfiguration.getKeylessUnlock();
 					customPickDialog(getString(title),KEYLESS_LEVEL,level);
 				}
 //				else if(title == R.string.title_tx_power)
@@ -296,7 +297,7 @@ public class SettingListActivity extends Activity
 						return;
 					}
 
-					final int tagCounter = (modifiedSetting[2] & 0x0F) > 0? 1:0;
+					final int tagCounter = mBleConfiguration.getSlaveTagMode() > 0? 1:0;
 					customPickDialog(getString(title),SLAVE_TAG,tagCounter);
 				}
 			}
@@ -310,7 +311,7 @@ public class SettingListActivity extends Activity
 				service = BluetoothLeIndependentService.getInstance();
 
 				initSetting = service.readBleSetting();
-				modifiedSetting = copyArray(initSetting);
+				mBleConfiguration = new BleConfiguration(copyArray(initSetting));
 
 				service.setIpcCallbackhandler(mHandler);
 
@@ -367,7 +368,7 @@ public class SettingListActivity extends Activity
 				{
 					case 0: // Mobile Quality
 					{
-						map.put("value",((int)modifiedSetting[0] & 0x0F)+"");
+						map.put("value", mBleConfiguration.getMobileNumber());
 					}
 					break;
 					case 1:	// Auto Connect
@@ -418,14 +419,14 @@ public class SettingListActivity extends Activity
 //					break;
 					case 4:	// Keyless Lock
 					{
-						int level = (int)modifiedSetting[1] & 0x0F;
+						int level = mBleConfiguration.getKeylessLock();
 						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
 						map.put("value",KEYLESS_LEVEL[level]);
 					}
 					break;
 					case 5:	// Keyless Unlock
 					{
-						int level = (int)((modifiedSetting[1]>>4) & 0x0F);
+						int level = mBleConfiguration.getKeylessUnlock();
 						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
 						map.put("value",KEYLESS_LEVEL[level]);
 					}
@@ -437,7 +438,7 @@ public class SettingListActivity extends Activity
 //					break;
 					case 6:	// Counter
 					{
-						final int level = (modifiedSetting[2] & 0x0F)> 0 ?1:0;
+						final int level = mBleConfiguration.getSlaveTagMode() > 0 ?1:0;
 						map.put("value",SLAVE_TAG[level]);
 					}
 					break;
@@ -536,9 +537,7 @@ public class SettingListActivity extends Activity
 			}
 			else if(title.equals(getString(R.string.title_tx_power_keyless_lock)))
 			{
-				int keyLess = modifiedSetting[1];
-				keyLess = (keyLess & 0xF0) | position;
-				modifiedSetting[1] = (byte)keyLess;
+				mBleConfiguration.setKeylessLock(position);
 				refreshMenu();
 
 //				final int oriLevel = service.getTxPowerKeylessLock();
@@ -554,9 +553,7 @@ public class SettingListActivity extends Activity
 			}
 			else if(title.equals(getString(R.string.title_tx_power_keyless_unlock)))
 			{
-				int keyLess = modifiedSetting[1];
-				keyLess = (keyLess & 0x0F) | (position<<4);
-				modifiedSetting[1] = (byte)keyLess;
+				mBleConfiguration.setKeylessUnlock(position);
 				refreshMenu();
 
 //				final int oriLevel = service.getTxPowerKeylessUnlock();
@@ -572,9 +569,7 @@ public class SettingListActivity extends Activity
 			}
 			else if(title.equals(getString(R.string.title_slave_tag_counter)))
 			{
-				int tagCounter = modifiedSetting[2];
-				tagCounter = (tagCounter & 0xF0) | position;
-				modifiedSetting[2] = (byte)tagCounter;
+				mBleConfiguration.setSlaveTagMode(position);
 				refreshMenu();
 			}
 		}
@@ -586,7 +581,7 @@ public class SettingListActivity extends Activity
 
 	private boolean isDataChanged()
 	{
-		return !isEqual(initSetting,modifiedSetting);
+		return !isEqual(initSetting,mBleConfiguration.getSetting());
 	}
 
 
@@ -637,7 +632,7 @@ public class SettingListActivity extends Activity
 		mHandler.removeCallbacks(runnableTimeout);
 		mHandler.postDelayed(runnableTimeout,5000);
 
-		service.sendSettingInformation(modifiedSetting);
+		service.sendSettingInformation(mBleConfiguration.getSetting());
 	}
 
 	private byte[] copyArray(final byte[] byteArray)

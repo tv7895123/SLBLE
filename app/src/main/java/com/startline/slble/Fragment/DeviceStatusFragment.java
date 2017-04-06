@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+import com.startline.slble.Interface.NormalValue;
 import com.startline.slble.PureClass.SlbleCommand;
 import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
@@ -22,7 +23,7 @@ import static com.startline.slble.PureClass.SlbleProtocol.*;
 /**
  * Created by terry on 2015/8/4.
  */
-public class DeviceStatusFragment extends Fragment
+public class DeviceStatusFragment extends Fragment implements NormalValue
 {
 	//*****************************************************************//
 	//  Constant Variables                                             //
@@ -545,18 +546,18 @@ public class DeviceStatusFragment extends Fragment
 			case BluetoothLeIndependentService.CSTA_STA:
 			{
 				final StaCstaDecode cstaDecode = new StaCstaDecode(csta);
-				imgDoor.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_DOOR)==1?true:false);
-				imgHood.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_HOOD)==1?true:false);
-				imgTrunk.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_TRUNK)==1?true:false);
-				imgIgn.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_IGN)==1?true:false);
-				imgRunning.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_RUNNING)==1?true:false);
-				imgArm.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_ARM)==1?true:false);
-				imgRemoteStart.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_REMOTE_START)==1?true:false);
-				imgValet.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_VALET)==1?true:false);
-				imgAlarm.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_ALARM)==1?true:false);
-				imgPBrake.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_P_BRAKE)==1?true:false);
-				imgHBrake.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_H_BRAKE)==1?true:false);
-				imgHijack.setSelected(cstaDecode.getValue(StaCstaDecode.CSTA_HIJACK)==1?true:false);
+				imgDoor.setSelected(cstaDecode.getDoor() == ON);
+				imgHood.setSelected(cstaDecode.getHood() == ON);
+				imgTrunk.setSelected(cstaDecode.gettrunk() == ON);
+				imgIgn.setSelected(cstaDecode.getIgn() == ON);
+				imgRunning.setSelected(cstaDecode.getRunning() == ON);
+				imgArm.setSelected(cstaDecode.getArm() == ON);
+				imgRemoteStart.setSelected(cstaDecode.getRemoteStart() == ON);
+				imgValet.setSelected(cstaDecode.getValet() == ON);
+				imgAlarm.setSelected(cstaDecode.getAlarm() == ON);
+				imgPBrake.setSelected(cstaDecode.getPBrake() == ON);
+				imgHBrake.setSelected(cstaDecode.getHBrake() == ON);
+				imgHijack.setSelected(cstaDecode.getHijack() == ON);
 			}
 			break;
 		}

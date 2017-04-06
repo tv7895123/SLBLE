@@ -7,66 +7,99 @@ public class BleConfiguration
 {
 //***************************			Info		***************************
 //	Name	Bit 7	Bit 6	Bit 5	Bit 4	Bit 3	Bit 2	Bit 1	Bit 0
-//	BUF[0]	---		---		---		---		Mobile number
-//	BUF[1]	Disarm                  		Arm
-//	BUF[2]	---		---		---		---		---		---		---		---
+//	BUF[0]	Info Version            		Mobile number
+//	BUF[1]	Keyless Unlock                  Keyless Lock
+//	BUF[2]	BTR Mode                		Slave Tag Mode
 //	BUF[3]	---		---		---		---		---		---		---		---
 //	BUF[4]	---		---		---		---		---		---		---		---
 
-	public static final int BYTE_KEY_LESS = 1;
+    public static final int MASK_HIGH_BYTE = 0x0F;
+    public static final int MASK_LOW_BYTE = 0xF0;
 
-    public static final int MASK_BIT = 0x01;
-    public static final int MASK_4BIT = 0x0F;
+	private byte[] setting;
 
-	private long setting = 0;
-	private long info = 0;
-
-	public BleConfiguration(final long info, final long setting)
+	public BleConfiguration(final byte[] setting)
 	{
-	 	this.info = info;
 		this.setting = setting;
 	}
 
-    public void setInfo(final long value)
+	public byte[] getSetting()
     {
-        info = value;
+        return setting;
     }
 
-	public void setSetting(final long value)
+	public void setSetting(final byte[] value)
 	{
 		setting = value;
 	}
 
-	public static long setValue(final long param,final int value,final int shift,final int mask)
-	{
-		return	(param & (~(mask<<shift))) | (value<<shift);
-	}
 
-    public int getSettingValue(final int bit)
+	private int getHighByte(final byte src)
     {
-        return getSettingValue(bit,0x1);
+        return (src>>4) & MASK_HIGH_BYTE;
     }
 
-    public int getSettingValue(final int bit,final int mask)
+    private int getLowByte(final byte src)
     {
-		final long value = setting>>bit;
-        return (int)(value & mask);
+        return src & MASK_HIGH_BYTE;
     }
 
-    public int getInfoValue(final int bit)
+    public int getMobileNumber()
     {
-        return getInfoValue(bit, 0x1);
+        return getLowByte(setting[0]);
     }
 
-    public int getInfoValue(final int bit,final int mask)
+    public int getInfoVersion()
     {
-		final long value = info>>bit;
-        return (int)(value & mask);
+        return getHighByte(setting[0]);
     }
 
-	public static int getValue(final long param,final int bit,final int mask)
+    public int getKeylessLock()
     {
-		final long value = param>>bit;
-        return (int)(value & mask);
+        return getLowByte(setting[1]);
     }
+
+    public int getKeylessUnlock()
+    {
+        return getHighByte(setting[1]);
+    }
+
+    public int getSlaveTagMode()
+    {
+        return getLowByte(setting[2]);
+    }
+
+    public int getBtrMode()
+    {
+        return getHighByte(setting[2]);
+    }
+
+
+
+
+    private byte setHighByte(final byte src, final int value)
+    {
+        return (byte)((src & MASK_HIGH_BYTE) | ((value << 4) & MASK_LOW_BYTE));
+    }
+
+    private byte setLowByte(final byte src, final int value)
+    {
+        return (byte)((src & MASK_LOW_BYTE) | (value & MASK_HIGH_BYTE));
+    }
+
+    public void setKeylessLock(final int value)
+    {
+        setting[1] = setLowByte(setting[1], value);
+    }
+
+    public void setKeylessUnlock(final int value)
+    {
+        setting[1] = setHighByte(setting[1], value);
+    }
+
+    public void setSlaveTagMode(final int value)
+    {
+        setting[2] = setLowByte(setting[2], value);
+    }
+
 }
