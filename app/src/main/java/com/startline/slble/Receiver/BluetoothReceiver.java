@@ -87,8 +87,10 @@ public class BluetoothReceiver extends BroadcastReceiver
                 }
                 break;
                 case BluetoothAdapter.STATE_TURNING_ON:
-
-                    break;
+                {
+                    mService.setAllowConnect(true);
+                }
+                break;
             }
         }
         else
