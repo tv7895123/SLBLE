@@ -265,13 +265,13 @@ public class TimeUtil
 		return utcTime;
 	}
 
-	public static String timeOffset(final String format,final String fullDate,final long offset_ms)
+	public static String timeOffset(final String format,final String baseTime,final long offset_ms)
 	{
 		final SimpleDateFormat dateFormat = new SimpleDateFormat(format);
 		java.util.Date date = null;
 		try
 		{
-			date = dateFormat.parse(fullDate);
+			date = dateFormat.parse(baseTime);
 			long time = date.getTime();
 
 			time = time + offset_ms;
@@ -284,26 +284,6 @@ public class TimeUtil
 		}
 
 		return dateFormat.format(date);
-	}
-
-	public static long getTimeDifference(final String strDate1,final String strDate2,final String format)
-	{
-		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
-
-		try
-		{
-			final Date date1 = simpleDateFormat.parse(strDate1);
-
-			final Date date2 =simpleDateFormat.parse(strDate2);
-
-			return date1.getTime()-date2.getTime();
-		}
-		catch (Exception e)
-		{
-
-		}
-
-		return 0;
 	}
 
     public static String formatDifference(final Context context,final long diff_s)
@@ -341,26 +321,26 @@ public class TimeUtil
         return dateFormat.format(cal.getTime());
 	}
 
-	public static String getTimeDiff(String start,String end)
+	public static long getTimeDiff(final String timeFormat, String start,String end)
     {
         final long MILLISECOND_PER_MINUTE = 1000*60;
         final long MILLISECOND_PER_HOUR = MILLISECOND_PER_MINUTE*60;
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        String timeDiff="";
+        SimpleDateFormat format = new SimpleDateFormat(timeFormat);
+        long timeDiff = 0;
         try
         {
             Date Date1 = format.parse(start);
             Date Date2 = format.parse(end);
-            long mills = Date2.getTime() - Date1.getTime();
-            long mm = (mills/MILLISECOND_PER_MINUTE)%60;
-            long hh = mills/MILLISECOND_PER_HOUR;
-            //timeDiff = hh+" H "+mm+" m";
-            if(hh <10)
-                timeDiff = timeDiff+"0";
-            timeDiff = timeDiff+hh+":";
-            if(mm <10)
-                timeDiff = timeDiff+"0";
-            timeDiff = timeDiff+mm;
+            timeDiff = Date2.getTime() - Date1.getTime();
+//            long mm = (mills/MILLISECOND_PER_MINUTE)%60;
+//            long hh = mills/MILLISECOND_PER_HOUR;
+//            //timeDiff = hh+" H "+mm+" m";
+//            if(hh <10)
+//                timeDiff = timeDiff+"0";
+//            timeDiff = timeDiff+hh+":";
+//            if(mm <10)
+//                timeDiff = timeDiff+"0";
+//            timeDiff = timeDiff+mm;
         }
         catch (ParseException e)
         {

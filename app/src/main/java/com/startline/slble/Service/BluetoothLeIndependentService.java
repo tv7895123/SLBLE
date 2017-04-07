@@ -192,6 +192,7 @@ public class BluetoothLeIndependentService extends Service
 	// Setting
 	public static final int PARAM_SETTING_INFORMATION = 0x1000;
 	public static final int PARAM_TX_POWER_LEVEL = 0x1001;
+	public static final int PARAM_SETTING_AUTO_START = 0x1002;
 
 
 	// Debug
@@ -2611,8 +2612,8 @@ public class BluetoothLeIndependentService extends Service
 
 	private boolean handleReceiveCsta(final byte[] receiveData,final boolean sendAck)
 	{
-		final int cstaLength = (receiveData[FIELD_PARAMETER]>>4) & 0x0F;
-		final int cstaSequence = receiveData[FIELD_PARAMETER] & 0x0F;
+		final int cstaLength = ((receiveData[FIELD_PARAMETER]>>4) & 0x0F);
+		final int cstaSequence = (receiveData[FIELD_PARAMETER] & 0x0F);
 
 		final String s = formatByteArrayToLog(receiveData);
 		LogUtil.d(TAG,"[Process] Receive Csta : " + s,Thread.currentThread().getStackTrace());
@@ -2965,6 +2966,20 @@ public class BluetoothLeIndependentService extends Service
 		sendPlainData(writeData);
 	}
 
+	public void sendRequestAutoStartSetting()
+	{
+		LogUtil.d(TAG, "RequestAutoStartSetting",Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send RequestAutoStartSetting"));
+		// Init packet content
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_SETTING_AUTO_START;
+		writeData[FIELD_PARAMETER] = PARAM_SETTING_REQUEST;
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
+
+		sendPlainData(writeData);
+	}
+
 	private void sendErrorMessage(final boolean keepRandom,final int errorCode)
 	{
 		LogUtil.d(TAG, "[Error] Send error message:" + errorCode,Thread.currentThread().getStackTrace());
@@ -3223,6 +3238,28 @@ public class BluetoothLeIndependentService extends Service
 		final String s = formatByteArrayToLog(writeData);
 		LogUtil.d(TAG, " Send SettingInformation  : " + s,Thread.currentThread().getStackTrace());
 		appendLog(formatSendString("Send SettingInformation  : "+ NEW_LINE_CHARACTER + s));
+
+		sendPlainData(writeData);
+	}
+
+	public void sendAutoStartSetting(final byte[] data)
+	{
+		if(getConnectionState() != BluetoothProfile.STATE_CONNECTED) return;
+
+		final byte[] writeData = new byte[PACKET_LENGTH];
+		writeData[FIELD_ID] = getRandom(255);
+		writeData[FIELD_COMMAND] = CMD_SETTING_AUTO_START;
+		writeData[FIELD_PARAMETER] = (byte)PARAM_SETTING_WRITE;
+
+		fillData(writeData,data);
+
+		// fill check sum
+		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
+
+
+		final String s = formatByteArrayToLog(writeData);
+		LogUtil.d(TAG, " Send AutoStartSetting  : " + s,Thread.currentThread().getStackTrace());
+		appendLog(formatSendString("Send AutoStartSetting  : "+ NEW_LINE_CHARACTER + s));
 
 		sendPlainData(writeData);
 	}
@@ -4504,6 +4541,28 @@ public class BluetoothLeIndependentService extends Service
 		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_BLE_SETTING,encodeString).apply();
 
 		initDeviceState(INIT_STATE_CSTA);
+	}
+
+
+	public byte[] readAutoStartSetting()
+	{
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String encodeString =  sharedPreferences.getString(Constants.CONFIG_ITEM_AUTO_START_SETTING,"");
+		byte[] data = Base64.decode(encodeString,Base64.DEFAULT);
+
+		if(data == null || data.length == 0)
+		{
+			data = new byte[16];
+		}
+		return data;
+	}
+
+
+	public void saveAutoStartSetting(final byte[] data)
+	{
+		final SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.CONFIG_FILE_SLBLE_SETTING, Context.MODE_PRIVATE);
+		final String encodeString =  Base64.encodeToString(data,Base64.DEFAULT);
+		sharedPreferences.edit().putString(Constants.CONFIG_ITEM_AUTO_START_SETTING,encodeString).apply();
 	}
 
 	//*****************************************************************//

@@ -368,7 +368,7 @@ public class SettingListActivity extends Activity
 				{
 					case 0: // Mobile Quality
 					{
-						map.put("value", mBleConfiguration.getMobileNumber());
+						map.put("value", String.valueOf(mBleConfiguration.getMobileNumber()));
 					}
 					break;
 					case 1:	// Auto Connect
@@ -382,7 +382,7 @@ public class SettingListActivity extends Activity
 							value = jsonObject.getInt(getDisplayString(titleArray[i]));
 						}
 
-						map.put("value",value);
+						map.put("value",String.valueOf(value));
 					}
 					break;
 					case 3: // TX Power Group

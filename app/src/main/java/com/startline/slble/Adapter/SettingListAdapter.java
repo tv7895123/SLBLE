@@ -163,7 +163,7 @@ public class SettingListAdapter extends BaseAdapter
             {
                 holder.checkBox.setTag(holder.title.getText().toString());
                 holder.value.setVisibility(View.INVISIBLE);
-                int value = (int)item.get("value");
+                int value = Integer.parseInt((String)item.get("value"));
                 if(value == 0)
                     holder.checkBox.setChecked(false);
                 else

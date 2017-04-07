@@ -31,12 +31,13 @@
     <string name = "logging_in">Logging in...</string>
     <string name = "login_success">Login success</string>
 
-    <string name="ok">確定</string>
-	<string name="cancel">取消</string>
+    <string name="ok">Ok</string>
+	<string name="cancel">Cancel</string>
 
     <string name = "title_app_setting">APP Setting</string>
     <string name = "title_ble_setting">BLE Setting</string>
 
+    <!--Setting-->
     <string name = "title_mobile_number">Mobile number</string>
     <string name = "title_auto_connect">Auto connect</string>
     <string name = "title_auto_scroll">Auto scroll</string>
@@ -59,6 +60,13 @@
     <string name = "description_slave_tag"></string>
     <string name = "description_slave_tag_counter"></string>
 
+
+    <!--Auto Start-->
+    <string name = "title_turbo_time">Turbo Time</string>
+    <string name = "title_daily_time">Daily Time</string>
+    <string name = "title_temperature">Temperature</string>
+    <string name = "title_low_voltage">Low Voltage</string>
+    <string name = "title_clock_time">Clock Time</string>
 
     <!--AF_TITLE-->
     <string name = "title_item_af_table">AF Table</string>
@@ -113,8 +121,13 @@
     <string name = "save">Save</string>
 
 
-<string name="day">日</string>
-	<string name="days">天</string>
-	<string name="hour">時</string>
-    <string name="minute">分</string>
+    <!--Unit-->
+    <string name="min">min</string>
+    <string name="hr">hr</string>
+    <string name="degree_celsius">℃</string>
+    <string name="voltage">V</string>
+
+	<string name="days">days</string>
+	<string name="hour">hour</string>
+    <string name="minute">minute</string>
 </resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--TextView-->
+    <style name="GenericTextViewTitle" parent="@android:style/TextAppearance.Small">
+        <item name="android:layout_width">100dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textColor">@color/config_text_view_color</item>
+        <item name="android:textSize">@dimen/item_title</item>
+    </style>
+
+    <style name="GenericTextViewValue" parent="@android:style/TextAppearance.Small">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textColor">@color/config_text_view_color</item>
+        <item name="android:textSize">@dimen/item_value</item>
+    </style>
+</resources>

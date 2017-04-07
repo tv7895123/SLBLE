@@ -8,4 +8,5 @@ public class Constants
 	public static final String CONFIG_FILE_SLBLE_SETTING = "FileSlbleSetting";
 	public static final String CONFIG_ITEM_APP_SETTING = "ItemAppSetting";
 	public static final String CONFIG_ITEM_BLE_SETTING = "ItemBleSetting";
+	public static final String CONFIG_ITEM_AUTO_START_SETTING = "ItemAutoStartSetting";
 }

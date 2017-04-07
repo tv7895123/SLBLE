@@ -42,7 +42,7 @@ public class SlbleProtocol
 	public static final byte CMD_SETTING_INFORMATION = 0x60;
 	public static final byte CMD_PROGRAM_INTERFACE = (byte) 0x80;
 	public static final byte CMD_PROGRAM_DATA = (byte) 0x81;
-
+	public static final byte CMD_SETTING_AUTO_START = (byte) 0x82;
     //*****************************************************************//
     //  Packet Parameter											   //
     //*****************************************************************//

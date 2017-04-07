@@ -314,6 +314,21 @@ public class TabActivity extends FragmentActivity
 			}
 			return true;
 
+			case R.id.action_auto_start:
+			{
+				//if(mBluetoothLeService != null && mBluetoothLeService.isDeviceInitialized())
+				{
+					final Intent intent = new Intent();
+					intent.setClass(context,AutoStartSettingActivity.class);
+					startActivity(intent);
+				}
+//				else
+//				{
+//					Toast.makeText(context,"Device not connected",Toast.LENGTH_SHORT).show();
+//				}
+			}
+			return true;
+
 			case R.id.action_tool:
 			{
 				final Intent intent = new Intent();
