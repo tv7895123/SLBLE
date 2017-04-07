@@ -68,16 +68,19 @@ public class SfFragment extends BaseFragment
             ,R.string.title_item_sensor_running
             ,R.string.title_item_auto_shut_engine
             ,R.string.title_item_start_with_lock
+
             ,R.string.title_item_start_with_parking_light
             ,R.string.title_item_locking_management
             ,R.string.title_item_auto_disarm
             ,R.string.title_item_cranking_time
             ,R.string.title_item_fuel_type
+
             ,R.string.title_item_engine_running_detect
             ,R.string.title_item_turbo_time_active
             ,R.string.title_item_ign3_bypass
             ,R.string.title_item_engine_start_pts
             ,R.string.title_item_auto_gear
+
             ,R.string.title_item_engine_start_webasto
             ,R.string.title_item_webasto_time
             ,R.string.title_item_engine_start_algroithm
@@ -167,7 +170,7 @@ public class SfFragment extends BaseFragment
             break;
             case SF_ITEM_SENSOR_RUNNING :
             {
-                itemArray = new String[]{"Off", "Smart bypass for Dome light", "Pin switch delay 30 sec", "Shock On, Tilt On/ Add on"};
+                itemArray = new String[]{"Off", "Shock on,Tilt on / Add Off", "Shock off,Tilt off / Add on", "Shock On, Tilt On / Add on"};
             }
             break;
             case SF_ITEM_AUTO_SHUT_ENGINE :
@@ -217,7 +220,7 @@ public class SfFragment extends BaseFragment
             break;
             case SF_ITEM_IGN3_BYPASS :
             {
-                itemArray = new String[]{"Full time (Without turbo time)", "30'S (Without turbo time)", "Full time with turbo time", "30'S with turbo time"};
+                itemArray = new String[]{"Full time (Without turbo time)", "30'S (Without turbo time)", "Full time with turbo time", "Steering shaft unlock function"};
             }
             break;
             case SF_ITEM_ENGINE_START_PTS :
@@ -242,7 +245,7 @@ public class SfFragment extends BaseFragment
             break;
             case SF_ITEM_ENGINE_START_ALGROITHM :
             {
-                itemArray = new String[]{"Only engine starting", "Only Webasto starting", "First - Webasto heating,then engine starting", "First - Webasto heating,then engine starting"};
+                itemArray = new String[]{"Webasto start OFF", "Only Webasto starting", "First - Webasto heating,then engine starting", "First - Webasto heating,then engine starting (Webasto still ON)"};
             }
             break;
             default:

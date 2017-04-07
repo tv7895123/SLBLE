@@ -93,6 +93,7 @@
     <string name = "title_item_event_2_input">Event2 input selection</string>
     <string name = "title_item_slave_search_time">Slave search time</string>
     <string name = "title_item_trunk_detection">Trunk moto Detection (CH6)</string>
+    <string name = "title_item_lock_door_in_slave_mode">Locking the doors in SLAVE mode when arming with TT and remote engine running</string>
 
     <!--SF_TITLE-->
     <string name = "title_item_sf_table">SF Table</string>

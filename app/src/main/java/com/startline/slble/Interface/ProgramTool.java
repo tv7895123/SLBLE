@@ -70,6 +70,7 @@ public interface  ProgramTool
     public static final int AF_ITEM_EVENT_2_INPUT = 18;
     public static final int AF_ITEM_SLAVE_SEARCH_TIME = 19;
     public static final int AF_ITEM_TRUNK_DETECTION = 20;
+    public static final int AF_ITEM_LOCK_DOOR_IN_SLAVE_MODE = 21;
 
     public static final int[][] AF_TABLE = new int[][]
     {

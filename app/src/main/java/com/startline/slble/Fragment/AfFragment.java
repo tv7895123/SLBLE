@@ -83,6 +83,7 @@ public class AfFragment extends BaseFragment
                 ,R.string.title_item_event_2_input
                 ,R.string.title_item_slave_search_time
                 ,R.string.title_item_trunk_detection
+                ,R.string.title_item_lock_door_in_slave_mode
         };
 
         // Generate simulated data
@@ -189,7 +190,7 @@ public class AfFragment extends BaseFragment
             break;
             case AF_ITEM_SLAVE_TAG_CONDITION:
             {
-                itemArray = new String[]{"Detection after disarm", "Detection after running"};
+                itemArray = new String[]{"Detection after disarm", "Detection after disarm but without unlock", "Detection after running"};
             }
             break;
             case AF_ITEM_ANTI_CAR_JACK:
@@ -210,7 +211,7 @@ public class AfFragment extends BaseFragment
                 }
                 else
                 {
-                    itemArray = new String[]{"Off", "On(Remove TAG)", "On(SEvent)", "On(CAN PIN CODE)"};
+                    itemArray = new String[]{"Off", "On(Remote)", "On(SEvent)", "On(CAN PIN CODE)"};
                 }
             }
             break;
@@ -231,7 +232,7 @@ public class AfFragment extends BaseFragment
             break;
             case AF_ITEM_GSM_OUT_COMMAND:
             {
-                itemArray = new String[]{"Flex CH Event 34 (3L+1)", "Flex CH Event 33 (LL+1)", "Flex CH Event 36 (2L+3)", "Webasto ON/OFF via UART"};
+                itemArray = new String[]{"Flex CH Event 34 (3L+1)", "Flex CH Event 33 (2L+1)", "Flex CH Event 36 (2L+3)", "Webasto ON/OFF via UART"};
             }
             break;
             case AF_ITEM_EVENT_1_INPUT:
@@ -272,6 +273,11 @@ public class AfFragment extends BaseFragment
             }
             break;
             case AF_ITEM_TRUNK_DETECTION:
+            {
+                itemArray = OFF_ON;
+            }
+            break;
+            case AF_ITEM_LOCK_DOOR_IN_SLAVE_MODE:
             {
                 itemArray = OFF_ON;
             }

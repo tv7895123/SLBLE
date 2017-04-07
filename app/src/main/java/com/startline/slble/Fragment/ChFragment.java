@@ -22,15 +22,16 @@ import static com.startline.slble.Interface.ProgramTool.*;
 
 public class ChFragment extends BaseFragment
 {
-    final String COND_NO_CONDITION ="[ 0 ] No conditions";
-    final String COND_ARMED = "[ 1 ] ARMED status";
-    final String COND_DISARMED = "[ 2 ] DISARMED status";
-    final String COND_IGN_ON = "[ 3 ] IGN ON status";
-    final String COND_IGN_OFF = "[ 4 ] IGN OFF status";
-    final String COND_ENGINE_START_BY_FACTORY = "[ 5 ] Engine was started by factory KEY";
-    final String COND_ENGINE_START_IN_TT_MODE = "[ 6 ] Engine was started end in TT mode";
-    final String COND_ENGINE_REMOTE_START = "[ 7 ] Engine was remote started by car alarm";
-    final String[] FULL_CONDITION = new String[]{COND_NO_CONDITION,COND_ARMED,COND_DISARMED,COND_IGN_ON,COND_IGN_OFF,COND_ENGINE_START_BY_FACTORY,COND_ENGINE_START_IN_TT_MODE,COND_ENGINE_REMOTE_START};
+    final String COND_0_NONE ="[ 0 ] None";
+    final String COND_1_ARMED = "[ 1 ] ARMED status";
+    final String COND_2_DISARMED = "[ 2 ] DISARMED status";
+    final String COND_3_IGN_ON = "[ 3 ] IGN ON status";
+    final String COND_4_IGN_OFF = "[ 4 ] IGN OFF status";
+    final String COND_5_ENGINE_START_BY_FACTORY = "[ 5 ] Engine was started by factory KEY";
+    final String COND_6_ENGINE_START_IN_TT_MODE = "[ 6 ] Engine was started end in TT mode";
+    final String COND_7_ENGINE_REMOTE_START = "[ 7 ] Engine was remote started by car alarm";
+    final String COND_8_ENGINE_REMOTE_START_SUCCESS = "[ 7 ] Engine was started end in  'Arm with engine running' ";
+    final String[] FULL_CONDITION = new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};
 
     private EditText editT1,editT2,editT3,editT4;
     private CheckBox checkPBrake,checkTrunk,checkDoor,checkSensor;
@@ -467,14 +468,24 @@ public class ChFragment extends BaseFragment
         spinnerChannel.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,
         new String[]
         {
-                "[ 1 ] Channel 1", "[ 2 ] Channel 2", "[ 3 ] Channel 3", "[ 4 ] Channel 4", "[ 5 ] Channel 5", "[ 6 ] Channel 6", "[ 7 ] Channel 7", "[ 8 ] Channel 8", "[ 9 ] Channel 9", "[ 10 ] Channel 10", "[ 11 ] Channel 11", "[ 12 ] Channel 12"
+                "[ 1 ] Channel 1", "[ 2 ] Channel 2", "[ 3 ] Channel 3", "[ 4 ] Channel 4"
+                , "[ 5 ] Channel 5", "[ 6 ] Channel 6", "[ 7 ] Channel 7", "[ 8 ] Channel 8"
+                , "[ 9 ] Channel 9", "[ 10 ] Channel 10", "[ 11 ] Channel 11", "[ 12 ] Channel 12"
                 //"[ 1 ] Trunk release", "[ 2 ] 2-step unlock", "[ 3 ] Engine stop delay 2'S then output 3'S", "[ 4 ] After Arm (20'S)", "[ 5 ] Start killer", "[ 6 ] Remote Control (4L+2)", "[ 7 ] Lock Output", "[ 8 ] UnLock Output", "[ 9 ] Parking Light ", "[ 10 ] IGN", "[ 11 ] ACC", "[ 12 ] IGN2"
         }));
 
         spinnerFunction.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,
         new String[]
         {
-                "[ 0 ] None","[ 1 ] DOOR LOCK impulse 1 sec" ,"[ 2 ] DOOR UNLOCK impulse 1 sec" ,"[ 3 ] DOOR LOCK impulse 1 sec (once when arming)" ,"[ 4 ] DOOR UNLOCK impulse 1 sec (once when disarming)" ,"[ 5 ] DOOR LOCK impulse 1 sec twice" ,"[ 6 ] DOOR UNLOCK impulse 1 sec twice" ,"[ 7 ] DOOR LOCK impulse 4 sec" ,"[ 8 ] DOOR UNLOCK impulse 4 sec" ,"[ 9 ] DOOR LOCK impulse 30 sec (comfort)" ,"[ 10 ] 2-step unlock impulse 1 sec" ,"[ 11 ] 2-step unlock impulse 1 sec twice" ,"[ 12 ] 2-step unlock impulse 4 sec" ,"[ 13 ] Trunk release - impulse 1 sec" ,"[ 14 ] ----" ,"[ 15 ] ----" ,"[ 16 ] ----" ,"[ 17 ] Parking light button" ,"[ 18 ] Parking lightflash" ,"[ 19 ] Impulse control of light signals" ,"[ 20 ] Engine stop delay 2 sec then output 3 sec (bypass door)" ,"[ 21 ] Engine stop delay 1 sec then output 1 sec (bypass door)" ,"[ 22 ] Hood Lock (R3)" ,"[ 23 ] Engine Killer mode" ,"[ 24 ] IGN" ,"[ 25 ] IGN*(Output is OFF when cranking)" ,"[ 26 ] ACC" ,"[ 27 ] ACC*(2sec before IGN Output and keep when cranking)" ,"[ 28 ] START" ,"[ 29 ] Pedal brake pressing during remote engine starting" ,"[ 30 ] ----" ,"[ 31 ] Start Killer mode" ,"[ 32 ] ----" ,"[ 33 ] ----" ,"[ 34 ] After Arm 20 sec" ,"[ 35 ] After Disrm 20 sec"
+                  "[ 0 ] None", "[ 1 ] DOOR LOCK impulse 1 sec" ,"[ 2 ] DOOR UNLOCK impulse 1 sec" ,"[ 3 ] DOOR LOCK impulse 1 sec (once when arming)" ,"[ 4 ] DOOR UNLOCK impulse 1 sec (once when disarming)"
+                , "[ 5 ] DOOR LOCK impulse 1 sec twice" , "[ 6 ] DOOR UNLOCK impulse 1 sec twice" , "[ 7 ] DOOR LOCK impulse 4 sec" , "[ 8 ] DOOR UNLOCK impulse 4 sec"
+                , "[ 9 ] DOOR LOCK impulse 30 sec (comfort)" , "[ 10 ] 2-step unlock impulse 1 sec" , "[ 11 ] 2-step unlock impulse 1 sec twice" , "[ 12 ] 2-step unlock impulse 4 sec"
+                , "[ 13 ] Trunk release - impulse 1 sec" , "[ 14 ] ----" , "[ 15 ] ----" , "[ 16 ] ----"
+                , "[ 17 ] Parking light button" , "[ 18 ] Parking lightflash" , "[ 19 ] Impulse control of light signals", "[ 20 ] Engine stop delay 2 sec then output 3 sec (bypass door)"
+                , "[ 21 ] Engine stop delay 1 sec then output 1 sec (bypass door)" , "[ 22 ] Hood Lock (R3)" , "[ 23 ] Engine Killer mode" , "[ 24 ] IGN"
+                , "[ 25 ] IGN*(Output is OFF when cranking)" , "[ 26 ] ACC" , "[ 27 ] ACC*(2sec before IGN Output and keep when cranking)" , "[ 28 ] START"
+                , "[ 29 ] Pedal brake pressing during remote engine starting" , "[ 30 ] Analog Bypass output" , "[ 31 ] Start Killer mode" , "[ 32 ] Digital Control Webasto"
+                , "[ 33 ] Analog Control Webasto" , "[ 34 ] After Arm 20 sec" , "[ 35 ] After Disrm 20 sec" , "[ 36 ] DVR Control function"
         }));
 
         final String[] event = new String[]{"[ 0 ] No Event" ,"[ 1 ] ---" ,"[ 2 ] Armed" ,"[ 3 ] Disarmed" ,"[ 4 ] Armed or Disarmed" ,"[ 5 ] Disarmed or IGN OFF" ,"[ 6 ] IGN ON" ,"[ 7 ] IGN OFF" ,"[ 8 ] Door LOCK" ,"[ 9 ] Door UNLOCK" ,"[ 10 ] Alarm" ,"[ 11 ] Hand Brake UP(ON)" ,"[ 12 ] Hand Break Down(OFF)" ,"[ 13 ] Engine Is Starts To Run" ,"[ 14 ] Successful Start" ,"[ 15 ] Not Successful Start (4T)" ,"[ 16 ] Any Start by Alarm" ,"[ 17 ] Any shut down by Alarm" ,"[ 18 ] Any Engine Shut Down" ,"[ 19 ] Pulse to Push Start (START)" ,"[ 20 ] Pulse to Push Start (STOP)" ,"[ 21 ] Transfer From Remote Engine Start to KEY" ,"[ 22 ] Event 1 input ON" ,"[ 23 ] Event 1 input OFF" ,"[ 24 ] Slave_TAG_Search" ,"[ 25 ] Trunk release" ,"[ 26 ] 2-Step Unlock" ,"[ 27 ] Start Killer ON" ,"[ 28 ] Start Killer OFF" ,"[ 29 ] Engine Killer ON" ,"[ 30 ] Engine Killer OFF" ,"[ 31 ] Trunk Open" ,"[ 32 ] Trunk Close" ,"[ 33 ] Remote Control (2L+1)" ,"[ 34 ] Remote Control (3L+1)" ,"[ 35 ] Remote Control (4L+1)" ,"[ 36 ] Remote Control (2L+3)" ,"[ 37 ] Remote Control (3L+2)" ,"[ 38 ] Remote Control (4L+2)" ,"[ 39 ] Event 2 input ON" ,"[ 40 ] Event 2 nput OFF","[ 41 ] BT On","[ 42 ] BT OFF"};
@@ -569,76 +580,83 @@ public class ChFragment extends BaseFragment
             case 10:
             case 21:
             {
-                return new String[]{COND_NO_CONDITION,COND_ENGINE_START_IN_TT_MODE,COND_ENGINE_REMOTE_START};
+                return new String[]{COND_0_NONE,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};
             }
             case 6:
             case 7:
-            case 8:
             case 9:
             case 14:
             case 15:
             case 16:
             case 17:
             case 19:
-            case 20:
             {
-                return new String[]{COND_NO_CONDITION,COND_ARMED,COND_DISARMED};
+                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED};
             }
 
             case 11:
             {
-                return new String[]{COND_NO_CONDITION,COND_DISARMED,COND_IGN_ON,COND_IGN_OFF,COND_ENGINE_START_BY_FACTORY};
+                return new String[]{COND_0_NONE,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY};
             }
             case 12:
             {
-                return new String[]{COND_NO_CONDITION,COND_DISARMED,COND_IGN_ON,COND_IGN_OFF,COND_ENGINE_START_BY_FACTORY,COND_ENGINE_START_IN_TT_MODE,COND_ENGINE_REMOTE_START};// 0,2,3,4,5,6,7
+                return new String[]{COND_0_NONE,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};// 0,2,3,4,5,6,7
             }
             case 18:
             {
-                return new String[]{COND_NO_CONDITION,COND_ARMED,COND_DISARMED,COND_ENGINE_START_BY_FACTORY,COND_ENGINE_START_IN_TT_MODE,COND_ENGINE_REMOTE_START};       // 0,1,2,5,6,7
+                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};       // 0,1,2,5,6,7
             }
+            case 20:
+            {
+                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START, COND_8_ENGINE_REMOTE_START_SUCCESS};
+            }
+
             case 22:
             case 23:
             case 39:
             case 40:
             {
-                return new String[]{COND_NO_CONDITION,COND_ARMED,COND_DISARMED,COND_IGN_ON,COND_IGN_OFF,COND_ENGINE_START_BY_FACTORY,COND_ENGINE_START_IN_TT_MODE,COND_ENGINE_REMOTE_START};// 0,1,2,3,4,5,6,7
+                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};// 0,1,2,3,4,5,6,7
             }
         }
 
         return new String[]{};
-        //return new String[]{COND_NO_CONDITION};
+        //return new String[]{COND_0_NONE};
     }
 
     private int getConditionIndex(final String condition)
     {
-        if(condition.equals(COND_ARMED))
+        if(condition.equals(COND_1_ARMED))
         {
             return 1;
         }
-        else if(condition.equals(COND_DISARMED))
+        else if(condition.equals(COND_2_DISARMED))
         {
             return 2;
         }
-        else if(condition.equals(COND_IGN_ON))
+        else if(condition.equals(COND_3_IGN_ON))
         {
             return 3;
         }
-        else if(condition.equals(COND_IGN_OFF))
+        else if(condition.equals(COND_4_IGN_OFF))
         {
             return 4;
         }
-        else if(condition.equals(COND_ENGINE_START_BY_FACTORY))
+        else if(condition.equals(COND_5_ENGINE_START_BY_FACTORY))
         {
             return 5;
         }
-        else if(condition.equals(COND_ENGINE_START_IN_TT_MODE))
+        else if(condition.equals(COND_6_ENGINE_START_IN_TT_MODE))
         {
             return 6;
         }
-        else if(condition.equals(COND_ENGINE_REMOTE_START))
+        else if(condition.equals(COND_7_ENGINE_REMOTE_START))
         {
             return 7;
+        }
+        else if(condition.equals(COND_8_ENGINE_REMOTE_START_SUCCESS))
+        {
+            return 8;
         }
 
         return 0;
