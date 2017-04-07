@@ -64,6 +64,7 @@ public class SettingListActivity extends Activity
 	};
 	private final String[] KEYLESS_LEVEL = new String[]{"Off","Low","Middle","High"};
 	private final String[] SLAVE_TAG = new String[]{"Off","On"};
+	private final String[] BTR_MODE = new String[]{"BTR","BTR+Keyless"};
 
 	private final CompoundButton.OnCheckedChangeListener onCheckedChangeListener = new CompoundButton.OnCheckedChangeListener()
 	{
@@ -211,13 +212,14 @@ public class SettingListActivity extends Activity
 			R.string.title_mobile_number
 			,R.string.title_auto_connect
 			,R.string.title_auto_scroll
-			//,R.string.title_auto_send_test
-			,R.string.title_tx_power
-			//,R.string.title_tx_power_normal
+
+			,R.string.blank
 			,R.string.title_tx_power_keyless_lock
 			,R.string.title_tx_power_keyless_unlock
-			//,R.string.title_slave_tag
 			,R.string.title_slave_tag_counter
+
+			,R.string.blank
+			,R.string.title_btr_mode
 		};
 
 		descriptionArray = new int[]
@@ -225,13 +227,14 @@ public class SettingListActivity extends Activity
 			R.string.description_mobile_number
 			,R.string.description_auto_connect
 			,R.string.description_auto_scroll
-			//,R.string.description_send_test
-			,R.string.description_tx_power
-			//,R.string.description_tx_power_normal
+
+			,R.string.blank
 			,R.string.description_tx_power_keyless_lock
 			,R.string.description_tx_power_keyless_unlock
-			//,R.string.description_slave_tag
 			,R.string.description_slave_tag_counter
+
+			,R.string.blank
+			,R.string.description_btr_mode
 		};
 
 		listView = (ListView)findViewById(R.id.list_view);
@@ -240,9 +243,9 @@ public class SettingListActivity extends Activity
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id)
 			{
-				final int title = titleArray[position];
+				final int titleId = titleArray[position];
 
-				if(title == R.string.title_tx_power_normal)
+				if(titleId == R.string.title_tx_power_normal)
 				{
 					final int level = service.getTxPowerLevel();
 					final String strLevel = level+ " dB";
@@ -255,9 +258,9 @@ public class SettingListActivity extends Activity
 							break;
 						}
 					}
-					customPickDialog(getString(title),TX_POWER_LEVEL,index);
+					customPickDialog(titleId,TX_POWER_LEVEL,index);
 				}
-				else if(title == R.string.title_tx_power_keyless_lock)
+				else if(titleId == R.string.title_tx_power_keyless_lock)
 				{
 					if(service == null || !service.isDeviceInitialized())
 					{
@@ -266,9 +269,9 @@ public class SettingListActivity extends Activity
 					}
 
 					final int level = mBleConfiguration.getKeylessLock();
-					customPickDialog(getString(title),KEYLESS_LEVEL,level);
+					customPickDialog(titleId,KEYLESS_LEVEL,level);
 				}
-				else if(title == R.string.title_tx_power_keyless_unlock)
+				else if(titleId == R.string.title_tx_power_keyless_unlock)
 				{
 					if(service == null || !service.isDeviceInitialized())
 					{
@@ -277,7 +280,7 @@ public class SettingListActivity extends Activity
 					}
 
 					final int level = mBleConfiguration.getKeylessUnlock();
-					customPickDialog(getString(title),KEYLESS_LEVEL,level);
+					customPickDialog(titleId,KEYLESS_LEVEL,level);
 				}
 //				else if(title == R.string.title_tx_power)
 //				{
@@ -289,7 +292,7 @@ public class SettingListActivity extends Activity
 //					mHandler.removeCallbacks(runnableTimeout);
 //					mHandler.postDelayed(runnableTimeout,5000);
 //				}
-				else if(title == R.string.title_slave_tag_counter)
+				else if(titleId == R.string.title_slave_tag_counter)
 				{
 					if(service == null || !service.isDeviceInitialized())
 					{
@@ -298,7 +301,7 @@ public class SettingListActivity extends Activity
 					}
 
 					final int tagCounter = mBleConfiguration.getSlaveTagMode() > 0? 1:0;
-					customPickDialog(getString(title),SLAVE_TAG,tagCounter);
+					customPickDialog(titleId,SLAVE_TAG,tagCounter);
 				}
 			}
 		});
@@ -342,13 +345,14 @@ public class SettingListActivity extends Activity
 		mTypeList.add(TYPE_TEXT);			// Mobile
 		mTypeList.add(TYPE_CHECKBOX);		// Auto Connect
 		mTypeList.add(TYPE_CHECKBOX);		// Auto Scroll
-		//mTypeList.add(TYPE_CHECKBOX);		// Auto Test
-		mTypeList.add(TYPE_GROUP);			// Tx Power
-		//mTypeList.add(TYPE_TEXT);			// Normal
+
+		mTypeList.add(TYPE_GROUP);			// Group
 		mTypeList.add(TYPE_TEXT);			// Keyless Lock
 		mTypeList.add(TYPE_TEXT);			// Keyless Unlock
-		//mTypeList.add(TYPE_GROUP);			// Slave Tag
 		mTypeList.add(TYPE_TEXT);			// Counter
+
+		mTypeList.add(TYPE_GROUP);			// Group
+		mTypeList.add(TYPE_TEXT);			// BTR Mode
 	}
 
 	private List<Map<String, Object>> getDataList()
@@ -362,89 +366,53 @@ public class SettingListActivity extends Activity
 			for (int i = 0; i < mTypeList.size(); i++)
 			{
 				Map<String, Object> map = new HashMap<String, Object>();
-				map.put("title", getDisplayString(titleArray[i]));
+				final int titleId = titleArray[i];
+				map.put("title", getDisplayString(titleId));
 				map.put("description", getDisplayString(descriptionArray[i]));
-				switch (i)
+
+				// Mobile Quality
+				if(titleId == R.string.title_mobile_number)
 				{
-					case 0: // Mobile Quality
+					map.put("value", String.valueOf(mBleConfiguration.getMobileNumber()));
+				}
+				else if( titleId == R.string.title_auto_connect
+						|| titleId == R.string.title_auto_scroll)
+				{
+					int value = 0;
+					if(!appSetting.isEmpty())
 					{
-						map.put("value", String.valueOf(mBleConfiguration.getMobileNumber()));
+						jsonObject = new JSONObject(appSetting);
+						value = jsonObject.getInt(getDisplayString(titleId));
 					}
-					break;
-					case 1:	// Auto Connect
-					case 2:	// Auto scroll
-					//case 3: // Auto Test
-					{
-						int value = 0;
-						if(!appSetting.isEmpty())
-						{
-							jsonObject = new JSONObject(appSetting);
-							value = jsonObject.getInt(getDisplayString(titleArray[i]));
-						}
 
-						map.put("value",String.valueOf(value));
-					}
-					break;
-					case 3: // TX Power Group
-					{
-//						if(service != null && service.isDeviceInitialized())
-//						{
-//							map.put("value",service.getTxPowerLevel() + " dB");
-//						}
-//						else
-//						{
-//							map.put("value","--");
-//						}
-						map.put("value","");
-					}
-					break;
-//					case 4:	// Tx Power Level
-//					{
-//						int value = 4;
-//						if((bleSetting[1] & 0xFF) > 0)
-//						{
-//							map.put("value","--");
-//						}
-//						else
-//						{
-//							if(service != null && service.isDeviceInitialized())
-//							{
-//								value = service.getTxPowerLevel();
-//							}
-//
-//							String level = value+" dB";
-//							map.put("value",level);
-//						}
-//					}
-//					break;
-					case 4:	// Keyless Lock
-					{
-						int level = mBleConfiguration.getKeylessLock();
-						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
-						map.put("value",KEYLESS_LEVEL[level]);
-					}
-					break;
-					case 5:	// Keyless Unlock
-					{
-						int level = mBleConfiguration.getKeylessUnlock();
-						level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
-						map.put("value",KEYLESS_LEVEL[level]);
-					}
-					break;
-//					case 6:	// Slave Tag
-//					{
-//						map.put("value","");
-//					}
-//					break;
-					case 6:	// Counter
-					{
-						final int level = mBleConfiguration.getSlaveTagMode() > 0 ?1:0;
-						map.put("value",SLAVE_TAG[level]);
-					}
-					break;
-
-					default:
-						break;
+					map.put("value",String.valueOf(value));
+				}
+				else if(titleId == R.string.title_tx_power_keyless_lock)
+				{
+					int level = mBleConfiguration.getKeylessLock();
+					level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
+					map.put("value",KEYLESS_LEVEL[level]);
+				}
+				else if(titleId == R.string.title_tx_power_keyless_unlock)
+				{
+					int level = mBleConfiguration.getKeylessUnlock();
+					level = level< 0? 0 : level>=KEYLESS_LEVEL.length? KEYLESS_LEVEL.length-1:level;
+					map.put("value",KEYLESS_LEVEL[level]);
+				}
+				else if(titleId == R.string.title_slave_tag_counter)
+				{
+					final int level = mBleConfiguration.getSlaveTagMode() > 0 ?1:0;
+					map.put("value",SLAVE_TAG[level]);
+				}
+				else if(titleId == R.string.title_btr_mode)
+				{
+					int mode = mBleConfiguration.getBtrMode();
+					mode = mode< 0? 0 : mode>=BTR_MODE.length? BTR_MODE.length-1:mode;
+					map.put("value",BTR_MODE[mode]);
+				}
+				else
+				{
+					map.put("value","");
 				}
 				list.add(map);
 			}
@@ -484,14 +452,14 @@ public class SettingListActivity extends Activity
 		}
 	}
 
-	private void customPickDialog(final String title, final String[] items, final int defaultIndex)
+	private void customPickDialog(final int titleId, final String[] items, final int defaultIndex)
 	{
 		final DialogInterface.OnClickListener onOkClickListener = new DialogInterface.OnClickListener()
 		{
 			@Override
 			public void onClick(DialogInterface dialog, int which)
 			{
-				handleAction(title,selectPosition);
+				handleAction(titleId,selectPosition);
 				updateListAdapter(true);
 			}
 		};
@@ -514,15 +482,15 @@ public class SettingListActivity extends Activity
 		};
 
 		selectPosition = defaultIndex;
-		DialogUtil.singleChoiceDialog(context, title, items, defaultIndex, onOkClickListener, onCancelClick, onItemClickListener, R.string.ok, R.string.cancel);
+		DialogUtil.singleChoiceDialog(context, getString(titleId), items, defaultIndex, onOkClickListener, onCancelClick, onItemClickListener, R.string.ok, R.string.cancel);
 	}
 
 	// Handle selection of pop dialog
-	private void handleAction(final String title,int position)
+	private void handleAction(final int titleId,int position)
 	{
 		try
 		{
-			if(title.equals(getString(R.string.title_tx_power_normal)))
+			if(titleId == R.string.title_tx_power_normal)
 			{
 				final String oriLevel = service.getTxPowerLevel()+" dB";
 				if(oriLevel.equals(TX_POWER_LEVEL[position]))
@@ -535,7 +503,7 @@ public class SettingListActivity extends Activity
 				mHandler.removeCallbacks(runnableTimeout);
 				mHandler.postDelayed(runnableTimeout,5000);
 			}
-			else if(title.equals(getString(R.string.title_tx_power_keyless_lock)))
+			else if(titleId == R.string.title_tx_power_keyless_lock)
 			{
 				mBleConfiguration.setKeylessLock(position);
 				refreshMenu();
@@ -551,7 +519,7 @@ public class SettingListActivity extends Activity
 //				mHandler.removeCallbacks(runnableTimeout);
 //				mHandler.postDelayed(runnableTimeout,5000);
 			}
-			else if(title.equals(getString(R.string.title_tx_power_keyless_unlock)))
+			else if(titleId == R.string.title_tx_power_keyless_unlock)
 			{
 				mBleConfiguration.setKeylessUnlock(position);
 				refreshMenu();
@@ -567,7 +535,7 @@ public class SettingListActivity extends Activity
 //				mHandler.removeCallbacks(runnableTimeout);
 //				mHandler.postDelayed(runnableTimeout,5000);
 			}
-			else if(title.equals(getString(R.string.title_slave_tag_counter)))
+			else if(titleId == R.string.title_slave_tag_counter)
 			{
 				mBleConfiguration.setSlaveTagMode(position);
 				refreshMenu();

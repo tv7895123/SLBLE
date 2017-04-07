@@ -29,7 +29,7 @@
                 android:textSize="12sp"
                 android:text="Value"/>
     </LinearLayout>
-    <RelativeLayout android:layout_width="55dp" android:layout_height="45dp">
+    <RelativeLayout android:layout_width="wrap_content" android:layout_height="45dp" android:minWidth="55dp">
         <TextView
                 android:id="@+id/txt_value"
                 android:layout_width="wrap_content"

@@ -48,6 +48,7 @@
     <string name = "title_tx_power_keyless_unlock">Keyless Unlock</string>
     <!--<string name = "title_slave_tag"></string>-->
     <string name = "title_slave_tag_counter">Slave Tag</string>
+    <string name = "title_btr_mode">BTR Mode</string>
 
     <string name = "description_mobile_number">Number of phones which are bonded to device</string>
     <string name = "description_auto_connect">Auto re-connect when device is disconnected</string>
@@ -59,6 +60,7 @@
     <string name = "description_tx_power_keyless_unlock">TX Power level for keyless unlock</string>
     <string name = "description_slave_tag"></string>
     <string name = "description_slave_tag_counter"></string>
+    <string name = "description_btr_mode"></string>
 
 
     <!--Auto Start-->
@@ -121,6 +123,8 @@
     <string name = "discard">Discard</string>
     <string name = "save">Save</string>
 
+
+    <string name = "blank"></string>
 
     <!--Unit-->
     <string name="min">min</string>

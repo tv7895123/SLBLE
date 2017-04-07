@@ -102,4 +102,9 @@ public class BleConfiguration
         setting[2] = setLowByte(setting[2], value);
     }
 
+    public void setBtrMode(final int value)
+    {
+        setting[2] = setHighByte(setting[2], value);
+    }
+
 }
