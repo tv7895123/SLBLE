@@ -2842,6 +2842,35 @@ public class BluetoothLeIndependentService extends Service
 				}
 				break;
 
+				case CMD_SETTING_AUTO_START:
+				{
+					// Receive response from device
+					if(receiveData[FIELD_PARAMETER] == PARAM_SETTING_RESPONSE)
+					{
+						final byte[] data = subByteArray(receiveData,3,16);
+						saveAutoStartSetting(data);
+
+
+						final Message message = new Message();
+						message.arg1 = PARAM_SETTING_AUTO_START;
+						message.arg2 = (int)receiveData[FIELD_PARAMETER];
+						message.obj = data;
+						sendCallbackMessage(message);
+					}
+					// Receive response from device, check if data is match we sent before
+					else if(receiveData[FIELD_PARAMETER] == PARAM_SETTING_WRITE)
+					{
+						final byte[] data = subByteArray(receiveData,3,16);
+
+						final Message message = new Message();
+						message.arg1 = PARAM_SETTING_AUTO_START;
+						message.arg2 = (int)receiveData[FIELD_PARAMETER];
+						message.obj = data;
+						sendCallbackMessage(message);
+					}
+				}
+				break;
+
 				case CMD_PROGRAM_INTERFACE:
 				{
 					if(receiveData[FIELD_PARAMETER] == PARAM_BLE_INTO_PROGRAM_INTERFACE)
@@ -2978,6 +3007,13 @@ public class BluetoothLeIndependentService extends Service
 		writeData[FIELD_CHECK_SUM] = getCheckSum(writeData);
 
 		sendPlainData(writeData);
+
+//		writeData[FIELD_PARAMETER] = PARAM_SETTING_RESPONSE;
+//		writeData[FIELD_DATA] = 0x11;
+//		writeData[FIELD_DATA+1] = 0x22;
+//		writeData[FIELD_DATA+2] = 0x33;
+//		writeData[FIELD_DATA+3] = 0x44;
+//		handleInActiveCommandFunction(writeData);
 	}
 
 	private void sendErrorMessage(final boolean keepRandom,final int errorCode)
@@ -3262,6 +3298,8 @@ public class BluetoothLeIndependentService extends Service
 		appendLog(formatSendString("Send AutoStartSetting  : "+ NEW_LINE_CHARACTER + s));
 
 		sendPlainData(writeData);
+
+		//handleInActiveCommandFunction(writeData);
 	}
 
 	private void clearTaskQueue()
