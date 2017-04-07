@@ -28,6 +28,8 @@ import java.lang.reflect.Field;
 import java.security.spec.ECField;
 import java.util.*;
 
+import static com.startline.slble.Activity.DeviceListActivity.EXTRAS_DEVICE_NAME;
+
 public class AutoStartSettingActivity extends Activity
 {
     //*****************************************************************//
@@ -139,6 +141,9 @@ public class AutoStartSettingActivity extends Activity
 		// Handle presses on the action bar items
 		switch (item.getItemId())
 		{
+			case android.R.id.home:
+				finish();
+				return true;
 			case R.id.action_save:
 			{
 				saveSetting();
@@ -157,7 +162,10 @@ public class AutoStartSettingActivity extends Activity
 		setContentView(R.layout.auto_start_setting);
 		mContext = this;
 
-		//TimerManager.init();
+		final Intent intent = getIntent();
+		final String deviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+		getActionBar().setTitle(deviceName);
+		getActionBar().setDisplayHomeAsUpEnabled(true);
 
 		mTitleArray = new int[]
 		{
@@ -225,8 +233,6 @@ public class AutoStartSettingActivity extends Activity
 					mHandler.postDelayed(runnableTimeout,5000);
 					mService.sendRequestAutoStartSetting();
 				}
-
-				updateListAdapter(true);
 			}
 		},initService());
     }

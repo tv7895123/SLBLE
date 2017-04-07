@@ -30,7 +30,7 @@ public class ChFragment extends BaseFragment
     final String COND_5_ENGINE_START_BY_FACTORY = "[ 5 ] Engine was started by factory KEY";
     final String COND_6_ENGINE_START_IN_TT_MODE = "[ 6 ] Engine was started end in TT mode";
     final String COND_7_ENGINE_REMOTE_START = "[ 7 ] Engine was remote started by car alarm";
-    final String COND_8_ENGINE_REMOTE_START_SUCCESS = "[ 7 ] Engine was started end in  'Arm with engine running' ";
+    final String COND_8_ENGINE_REMOTE_START_SUCCESS = "[ 8 ] Engine was started end in  'Arm with engine running' ";
     final String[] FULL_CONDITION = new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};
 
     private EditText editT1,editT2,editT3,editT4;

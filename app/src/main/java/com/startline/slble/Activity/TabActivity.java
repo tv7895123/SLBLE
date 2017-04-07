@@ -37,6 +37,8 @@ import com.startline.slble.R;
 import com.startline.slble.Service.BluetoothLeIndependentService;
 import com.startline.slble.Util.LogUtil;
 
+import static com.startline.slble.Activity.DeviceListActivity.EXTRAS_DEVICE_ADDRESS;
+import static com.startline.slble.Activity.DeviceListActivity.EXTRAS_DEVICE_NAME;
 import static com.startline.slble.Service.BluetoothLeIndependentService.*;
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -53,8 +55,6 @@ public class TabActivity extends FragmentActivity
 	//  Constant Variables                                             //
 	//*****************************************************************//
 	private final static String TAG = TabActivity.class.getSimpleName();
-	public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
-	public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 	private final String DEVICE_CONNECT_TAG = "Debug";
 	private final String DEVICE_STATUS_TAG = "Status";
 	public static final boolean SUPPORT_MULTI_DEVICE = true;
@@ -305,6 +305,7 @@ public class TabActivity extends FragmentActivity
 				{
 					final Intent intent = new Intent();
 					intent.setClass(context,SettingListActivity.class);
+					intent.putExtra(EXTRAS_DEVICE_NAME, mDeviceName);
 					startActivity(intent);
 				}
 //				else
@@ -320,6 +321,7 @@ public class TabActivity extends FragmentActivity
 				{
 					final Intent intent = new Intent();
 					intent.setClass(context,AutoStartSettingActivity.class);
+					intent.putExtra(EXTRAS_DEVICE_NAME, mDeviceName);
 					startActivity(intent);
 				}
 //				else

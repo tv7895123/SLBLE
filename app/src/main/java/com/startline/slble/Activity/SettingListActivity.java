@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.startline.slble.Activity.DeviceListActivity.EXTRAS_DEVICE_NAME;
 import static com.startline.slble.Adapter.SettingListAdapter.*;
 
 /**
@@ -188,6 +189,9 @@ public class SettingListActivity extends Activity
 		// Handle presses on the action bar items
 		switch (item.getItemId())
 		{
+			case android.R.id.home:
+				finish();
+				return true;
 			case R.id.action_save:
 			{
 				saveSetting();
@@ -206,6 +210,12 @@ public class SettingListActivity extends Activity
 		setContentView(R.layout.setting_list_activity);
 
 		context = this;
+
+		final Intent intent = getIntent();
+		final String deviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+		getActionBar().setTitle(deviceName);
+		getActionBar().setDisplayHomeAsUpEnabled(true);
+
 		mProgressDialog = new ProgressDialog(context);
 		titleArray = new int[]
 		{
