@@ -90,7 +90,7 @@ public class AutoStartSettingActivity extends Activity
 						{
 							mInitSetting = (byte[])msg.obj;
 							mAutoStartSetting.setSetting(copyArray(mInitSetting));
-							updateListAdapter(true);
+							updateListAdapter();
 							refreshMenu();
 						}
 						else
@@ -202,18 +202,8 @@ public class AutoStartSettingActivity extends Activity
 		mProgressDialog = new ProgressDialog(mContext);
 
 		listView = (ListView)findViewById(R.id.list_view_auto_start);
-		listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
-		{
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id)
-			{
-				handleListItemClick(parent, view, position, id);
-			}
-		});
 
 		updateListAdapter(false);
-
-
 
 		mHandler.postDelayed(new Runnable()
 		{
@@ -271,7 +261,7 @@ public class AutoStartSettingActivity extends Activity
 			public void onClick(DialogInterface dialog, int which)
 			{
 				handleAction(title,mSelectPosition);
-				updateListAdapter(true);
+				updateListAdapter();
 			}
 		};
 
@@ -391,7 +381,8 @@ public class AutoStartSettingActivity extends Activity
 				final int[] clockTime = convertClockTime(totalMinute);
 				mAutoStartSetting.setClockTimeHour(clockTime[1]);
 				mAutoStartSetting.setClockTimeMinute(clockTime[0]);
-				updateListAdapter(true);
+				updateListAdapter();
+				refreshMenu();
 			}
 		};
 
@@ -430,6 +421,17 @@ public class AutoStartSettingActivity extends Activity
 		return delayTime;
 	}
 
+	private void updateListAdapter()
+	{
+		if(mAutoStartSettingAdapter == null)
+		{
+			updateListAdapter(false);
+		}
+
+		mAutoStartSettingAdapter.setDataList(getData());
+		mAutoStartSettingAdapter.notifyDataSetChanged();
+	}
+
 	private void updateListAdapter(final boolean dataEnabled)
 	{
 		if(mAutoStartSettingAdapter == null)
@@ -442,6 +444,18 @@ public class AutoStartSettingActivity extends Activity
 			mAutoStartSettingAdapter.setDataEnabled(dataEnabled);
 			mAutoStartSettingAdapter.setDataList(getData());
 			mAutoStartSettingAdapter.notifyDataSetChanged();
+		}
+
+		if(dataEnabled)
+		{
+			listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
+			{
+				@Override
+				public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+				{
+					handleListItemClick(parent, view, position, id);
+				}
+			});
 		}
 	}
 
