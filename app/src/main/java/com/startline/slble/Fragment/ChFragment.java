@@ -485,10 +485,21 @@ public class ChFragment extends BaseFragment
                 , "[ 21 ] Engine stop delay 1 sec then output 1 sec (bypass door)" , "[ 22 ] Hood Lock (R3)" , "[ 23 ] Engine Killer mode" , "[ 24 ] IGN"
                 , "[ 25 ] IGN*(Output is OFF when cranking)" , "[ 26 ] ACC" , "[ 27 ] ACC*(2sec before IGN Output and keep when cranking)" , "[ 28 ] START"
                 , "[ 29 ] Pedal brake pressing during remote engine starting" , "[ 30 ] Analog Bypass output" , "[ 31 ] Start Killer mode" , "[ 32 ] Digital Control Webasto"
-                , "[ 33 ] Analog Control Webasto" , "[ 34 ] After Arm 20 sec" , "[ 35 ] After Disrm 20 sec" , "[ 36 ] DVR Control function"
+                , "[ 33 ] Analog Control Webasto" , "[ 34 ] After Arm 20 sec" , "[ 35 ] After Disrm 20 sec" , "[ 36 ] DVR Control function", "[ 37 ] Digital Control Eberspacher"
         }));
 
-        final String[] event = new String[]{"[ 0 ] No Event" ,"[ 1 ] ---" ,"[ 2 ] Armed" ,"[ 3 ] Disarmed" ,"[ 4 ] Armed or Disarmed" ,"[ 5 ] Disarmed or IGN OFF" ,"[ 6 ] IGN ON" ,"[ 7 ] IGN OFF" ,"[ 8 ] Door LOCK" ,"[ 9 ] Door UNLOCK" ,"[ 10 ] Alarm" ,"[ 11 ] Hand Brake UP(ON)" ,"[ 12 ] Hand Break Down(OFF)" ,"[ 13 ] Engine Is Starts To Run" ,"[ 14 ] Successful Start" ,"[ 15 ] Not Successful Start (4T)" ,"[ 16 ] Any Start by Alarm" ,"[ 17 ] Any shut down by Alarm" ,"[ 18 ] Any Engine Shut Down" ,"[ 19 ] Pulse to Push Start (START)" ,"[ 20 ] Pulse to Push Start (STOP)" ,"[ 21 ] Transfer From Remote Engine Start to KEY" ,"[ 22 ] Event 1 input ON" ,"[ 23 ] Event 1 input OFF" ,"[ 24 ] Slave_TAG_Search" ,"[ 25 ] Trunk release" ,"[ 26 ] 2-Step Unlock" ,"[ 27 ] Start Killer ON" ,"[ 28 ] Start Killer OFF" ,"[ 29 ] Engine Killer ON" ,"[ 30 ] Engine Killer OFF" ,"[ 31 ] Trunk Open" ,"[ 32 ] Trunk Close" ,"[ 33 ] Remote Control (2L+1)" ,"[ 34 ] Remote Control (3L+1)" ,"[ 35 ] Remote Control (4L+1)" ,"[ 36 ] Remote Control (2L+3)" ,"[ 37 ] Remote Control (3L+2)" ,"[ 38 ] Remote Control (4L+2)" ,"[ 39 ] Event 2 input ON" ,"[ 40 ] Event 2 nput OFF","[ 41 ] BT On","[ 42 ] BT OFF"};
+        final String[] event = new String[]
+        {
+            "[ 0 ] No Event" ,"[ 1 ] ---" ,"[ 2 ] Armed" ,"[ 3 ] Disarmed" ,"[ 4 ] Armed or Disarmed" ,"[ 5 ] Disarmed or IGN OFF"
+            ,"[ 6 ] IGN ON" ,"[ 7 ] IGN OFF" ,"[ 8 ] Door LOCK" ,"[ 9 ] Door UNLOCK" ,"[ 10 ] Alarm"
+            ,"[ 11 ] Hand Brake UP(ON)" ,"[ 12 ] Hand Break Down(OFF)" ,"[ 13 ] Engine Is Starts To Run" ,"[ 14 ] Successful Start" ,"[ 15 ] Not Successful Start (4T)"
+            ,"[ 16 ] Any Start by Alarm" ,"[ 17 ] Any shut down by Alarm" ,"[ 18 ] Any Engine Shut Down" ,"[ 19 ] Pulse to Push Start (START)" ,"[ 20 ] Pulse to Push Start (STOP)"
+            ,"[ 21 ] Transfer From Remote Engine Start to KEY" ,"[ 22 ] Event 1 input ON" ,"[ 23 ] Event 1 input OFF" ,"[ 24 ] Slave TAG Search successful" ,"[ 25 ] Trunk release"
+            ,"[ 26 ] 2-Step Unlock" ,"[ 27 ] Start Killer ON" ,"[ 28 ] Start Killer OFF" ,"[ 29 ] Engine Killer ON" ,"[ 30 ] Engine Killer OFF"
+            ,"[ 31 ] Trunk Open" ,"[ 32 ] Trunk Close" ,"[ 33 ] Remote Control (2L+1)" ,"[ 34 ] Remote Control (3L+1)" ,"[ 35 ] Remote Control (4L+1)"
+            ,"[ 36 ] Remote Control (2L+3)" ,"[ 37 ] Remote Control (3L+2)" ,"[ 38 ] Remote Control (4L+2)" ,"[ 39 ] Event 2 input ON" ,"[ 40 ] Event 2 input OFF"
+            ,"[ 41 ] BT Connected","[ 42 ] BT Disconnected"
+        };
         spinnerEventOn.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,event));
         spinnerEventOff.setAdapter(new MyArrayAdapter<String>(getActivity(), R.layout.spinner_item,event));
 
@@ -580,7 +591,13 @@ public class ChFragment extends BaseFragment
             case 10:
             case 21:
             {
-                return new String[]{COND_0_NONE,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};
+                //0,6,7
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_6_ENGINE_START_IN_TT_MODE
+                    ,COND_7_ENGINE_REMOTE_START
+                };
             }
             case 6:
             case 7:
@@ -590,21 +607,54 @@ public class ChFragment extends BaseFragment
             case 16:
             case 17:
             case 19:
+            //case 20:
             {
-                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED};
+                //0,1,2
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_1_ARMED
+                    ,COND_2_DISARMED
+                };
             }
 
             case 11:
             {
-                return new String[]{COND_0_NONE,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY};
+                //0,2,3,4,5
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_2_DISARMED
+                    ,COND_3_IGN_ON
+                    ,COND_4_IGN_OFF
+                    ,COND_5_ENGINE_START_BY_FACTORY
+                };
             }
             case 12:
             {
-                return new String[]{COND_0_NONE,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};// 0,2,3,4,5,6,7
+                // 0,2,3,4,5,6,7
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_2_DISARMED
+                    ,COND_3_IGN_ON
+                    ,COND_4_IGN_OFF
+                    ,COND_5_ENGINE_START_BY_FACTORY
+                    ,COND_6_ENGINE_START_IN_TT_MODE
+                    ,COND_7_ENGINE_REMOTE_START};
             }
             case 18:
             {
-                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};       // 0,1,2,5,6,7
+                // 0,1,2,5,6,7
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_1_ARMED
+                    ,COND_2_DISARMED
+                    ,COND_5_ENGINE_START_BY_FACTORY
+                    ,COND_6_ENGINE_START_IN_TT_MODE
+                    ,COND_7_ENGINE_REMOTE_START
+                };
             }
             case 20:
             {
@@ -616,7 +666,17 @@ public class ChFragment extends BaseFragment
             case 39:
             case 40:
             {
-                return new String[]{COND_0_NONE,COND_1_ARMED,COND_2_DISARMED,COND_3_IGN_ON,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY,COND_6_ENGINE_START_IN_TT_MODE,COND_7_ENGINE_REMOTE_START};// 0,1,2,3,4,5,6,7
+                // 0,1,2,3,4,5,6,7
+                return new String[]
+                {
+                    COND_0_NONE
+                    ,COND_1_ARMED
+                    ,COND_2_DISARMED
+                    ,COND_3_IGN_ON
+                    ,COND_4_IGN_OFF,COND_5_ENGINE_START_BY_FACTORY
+                    ,COND_6_ENGINE_START_IN_TT_MODE
+                    ,COND_7_ENGINE_REMOTE_START
+                };
             }
         }
 
