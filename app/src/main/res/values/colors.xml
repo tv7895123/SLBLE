@@ -9,6 +9,7 @@
     <color name = "white">#FFFFFF</color>
     <color name = "blue">#0066FF</color>
     <color name = "green">#00AA66</color>
+    <color name = "cyan">#00FFFF</color>
     <color name = "light_blue">#00AAFF</color>
 
     <drawable name = "dark_gray">#5F5F5F</drawable>

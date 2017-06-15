@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SLBLE</string>
+    <string name="app_auto_connect">ACT</string>
     <string name = "ble_not_supported">BLE not supported</string>
     <string name = "error_get_ble">Get BLE service error</string>
     <string name = "unknown_device">Unknown_device</string>

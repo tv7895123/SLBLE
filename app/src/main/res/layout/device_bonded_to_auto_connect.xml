@@ -6,11 +6,20 @@
     android:paddingTop="10dp"
     android:paddingLeft="10dp"
     android:paddingRight="20dp">
-
+    <ImageView
+        android:id="@+id/img_check"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginLeft="10dp"
+        android:layout_centerVertical="true"
+        android:src="@drawable/check_2"
+        android:visibility="invisible"/>
     <TextView
         android:id="@+id/txt_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/img_check"
+        android:layout_marginLeft="20dp"
         android:textSize="15sp"
         android:textStyle="bold"
         android:text="NAME"/>
@@ -19,16 +28,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/txt_name"
+        android:layout_alignLeft="@id/txt_name"
         android:textSize="14sp"
         android:text="ADDRESS"/>
-    <Button
-        android:id="@+id/btn_unbond"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_alignParentRight="true"
-        android:layout_centerVertical="true"
-        android:focusable="false"
-        android:textSize="12sp"
-        android:text="Unbond"/>
+
 </RelativeLayout>
 

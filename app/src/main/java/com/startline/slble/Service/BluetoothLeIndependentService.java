@@ -61,6 +61,9 @@ public class BluetoothLeIndependentService extends Service
 	private final String SHOW_ADV_DATA_ADDRESS_1 = "48:36:5F:00:00:00";
 	private final String SHOW_ADV_DATA_ADDRESS_2 = "48:36:5F:22:22:22";
 
+	// Only Connect BLE not Bind
+	private final boolean NOT_BIND_DEVICE = true;
+
 	//=================================================================//
 	//																   //
 	//  Constant Variables                                             //
@@ -217,11 +220,13 @@ public class BluetoothLeIndependentService extends Service
 	private final int RECEIVE_DATA_BUFFER_LENGTH = 100;
 	private int  mAckFlag = 0;
 
+	private long mLastTimeNotifyScanDevice = 0;
+
 	// Connect
-	private boolean mAllowConnect = false;
+	private boolean mAllowConnect = true;
 
 	// App Setting
-	private boolean mAutoConnectOnDisconnect = false;
+	private boolean mAutoConnectOnDisconnect = true;
 	private boolean mAutoScroll = false;
 	private boolean mAutoTest = false;
 
@@ -541,7 +546,7 @@ public class BluetoothLeIndependentService extends Service
 					appendLog("Bind timeout");
 					LogUtil.d(TAG,"Bind timeout",Thread.currentThread().getStackTrace());
 					disconnect();
-					handleBleDisconnect();
+					//handleBleDisconnect();
 				}
 				break;
 			}
@@ -570,7 +575,7 @@ public class BluetoothLeIndependentService extends Service
 			else
 			{
 				startScan();
-				mHandler.postDelayed(scanDeviceRunnable, SCAN_INTERVAL_MS);
+				mHandler.postDelayed(scanDeviceRunnable, SCAN_INTERVAL_MS*2*30);
 			}
 		}
 	};
@@ -730,9 +735,10 @@ public class BluetoothLeIndependentService extends Service
 
 						if(!deviceName.startsWith(KEYWORD_SLBLE))
 						{
+							LogUtil.w(TAG, "Unsupported device !!!", Thread.currentThread().getStackTrace());
 							appendLog(formatConnectionString("Unsupported device !!!"));
 							//disconnect(false);  //Unsupported device
-							return;
+							//return;
 						}
 
 						if(mAutoTest)
@@ -935,6 +941,14 @@ public class BluetoothLeIndependentService extends Service
 				{
 					mBleDeviceRssiAdapter.addDevice(device, nameUTF8, rssi);
 				}
+
+
+				if(System.currentTimeMillis() - mLastTimeNotifyScanDevice  > 1000)
+				{
+					mBleDeviceRssiAdapter.sortList();
+					notifyScanResult();
+					mLastTimeNotifyScanDevice = System.currentTimeMillis();
+				}
 			}
 			catch (Exception e)
 			{
@@ -1073,6 +1087,13 @@ public class BluetoothLeIndependentService extends Service
 				mInputDeviceProfile = proxy;
 			}
 
+			final HashMap<String,String> autoConnectDevice = StorageUtil.getAutoConnectDevice(context);
+			final String address = autoConnectDevice.get(Constants.CONFIG_ITEM_DEVICE_ADDRESS);
+			if(!address.isEmpty())
+			{
+				initConnectDevice(address);
+			}
+
 			// If need to connect after get profile
 			if(mBTConnectionRequest)
 			{
@@ -1155,9 +1176,17 @@ public class BluetoothLeIndependentService extends Service
 		screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
 		registerReceiver(mScreenStateReceiver, screenStateFilter);
 
+
+		final HashMap<String,String> autoConnectDevice = StorageUtil.getAutoConnectDevice(this);
+		final String address = autoConnectDevice.get(Constants.CONFIG_ITEM_DEVICE_ADDRESS);
 		// Auto start scan if KeyLess and AutoConnect are enabled
 		if( initialize() )
 		{
+			if(!address.isEmpty())
+			{
+				initConnectDevice(address);
+			}
+
 			if(intent == null)
 				return super.onStartCommand(intent, flags, startId);
 
@@ -1402,6 +1431,9 @@ public class BluetoothLeIndependentService extends Service
 
 			}
 		}
+
+		setAutoConnectOnDisconnect(true);
+		setAllowConnect(true);
 	}
 
 	public void loadBleSetting(final byte[] bleSetting)
@@ -1947,6 +1979,7 @@ public class BluetoothLeIndependentService extends Service
 							&& !isBluetoothDeviceConnected(address)      										// Device not connected
 							&& (mConnectTimeLimit<0 || tryTimes<mConnectTimeLimit) )						// No limit or times under limit
 					{
+						LogUtil.i(TAG, "Preferred device : " + address, Thread.currentThread().getStackTrace());
 						int delayTime = KEYLESS_CONNECT_INTERVAL;
 						try
 						{
@@ -1978,45 +2011,54 @@ public class BluetoothLeIndependentService extends Service
 								LogUtil.d(getPackageName(),"Device not connected, start connect "+tryTimes,Thread.currentThread().getStackTrace());
 								tryTimes++;
 
-								if(!mScanning)
+								// Android 7.0
+								if (android.os.Build.VERSION.SDK_INT >= 30)
 								{
-									clearAllDevice();
-									mHandler.post(new Runnable()
+									// Do nothing
+									LogUtil.i(TAG, "New than Android 7.0, skip scan device in background", Thread.currentThread().getStackTrace());
+								}
+								else
+								{
+									if(!mScanning)
 									{
-										@Override
-										public void run()
+										clearAllDevice();
+										mHandler.post(new Runnable()
 										{
-											startScan();
-										}
-									});
+											@Override
+											public void run()
+											{
+												startScan();
+											}
+										});
 
 
-									Thread.sleep(1000);
+										Thread.sleep(1000);
 
-									mHandler.post(new Runnable()
-									{
-										@Override
-										public void run()
+										mHandler.post(new Runnable()
 										{
-											stopScan();
-										}
-									});
+											@Override
+											public void run()
+											{
+												stopScan();
+											}
+										});
 
-									for(int i=0 ;i<mBleDeviceRssiAdapter.getCount(); i++)
-									{
-										final BleDeviceRssi deviceRssi = mBleDeviceRssiAdapter.getDevice(i);
-										if(deviceRssi.bluetoothDevice == null)
-											continue;
-
-										if(mBluetoothDevice == null)
-											break;
-
-										LogUtil.d(TAG,deviceRssi.bluetoothDevice.getAddress(),Thread.currentThread().getStackTrace());
-										if(deviceRssi.bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
+										for(int i=0 ;i<mBleDeviceRssiAdapter.getCount(); i++)
 										{
-											createBTConnection();
-											delayTime = delayTime * 2;
-											break;
+											final BleDeviceRssi deviceRssi = mBleDeviceRssiAdapter.getDevice(i);
+											if(deviceRssi.bluetoothDevice == null)
+												continue;
+
+											if(mBluetoothDevice == null)
+												break;
+
+											LogUtil.d(TAG,deviceRssi.bluetoothDevice.getAddress(),Thread.currentThread().getStackTrace());
+											if(deviceRssi.bluetoothDevice.getAddress().equals(mBluetoothDevice.getAddress()))
+											{
+												createBTConnection();
+												delayTime = delayTime * 2;
+												break;
+											}
 										}
 									}
 								}
@@ -2032,6 +2074,7 @@ public class BluetoothLeIndependentService extends Service
 						catch (InterruptedException e)
 						{
 							gotException = true;
+							stopScan();
 							e.printStackTrace();
 						}
 					}
@@ -2068,6 +2111,12 @@ public class BluetoothLeIndependentService extends Service
 		LogUtil.d(TAG, "[Process] _bind",Thread.currentThread().getStackTrace());
 		try
 		{
+			if(NOT_BIND_DEVICE)
+			{
+				LogUtil.w(TAG, "Not allowed to bind device.", Thread.currentThread().getStackTrace());
+				return;
+			}
+
 			if(!isBluetoothAvailable())
 			{
 				return;
