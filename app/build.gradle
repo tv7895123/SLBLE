@@ -28,11 +28,12 @@ android {
     defaultConfig {
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
         buildConfigField "String", "GITHASH", "\"${getGitHash()}\""
-        applicationId "com.startline.slble"
-        minSdkVersion 18
-        targetSdkVersion 18
+        applicationId "com.starline.slble.act"
+        minSdkVersion 19
+        targetSdkVersion 21
         versionCode 1
         versionName "1.0"
+        vectorDrawables.useSupportLibrary = true
     }
 
     compileOptions {

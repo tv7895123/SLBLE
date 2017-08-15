@@ -3,10 +3,17 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Activity/AutoStartSettingActivity.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Adapter/AutoStartSettingAdapter.java" charset="ISO-8859-1" />
-    <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Adapter/AutoStartSettingAdapter.java" charset="ISO-8859-1" />
-    <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Adapter/GsmSettingAdapter.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Interface/NormalValue.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Util/DelegateUtil.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Util/FileUtil.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/Util/StorageUtil.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/java/com/startline/slble/view/MyProgressDialog.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable-hdpi/bluetooth.png" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable-hdpi/check.png" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable-hdpi/cross.png" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/layout/auto_connect_device.xml" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/layout/device_bonded_to_auto_connect.xml" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/layout/my_progress_dialog.xml" charset="ISO-8859-1" />
     <file url="PROJECT" charset="UTF-8" />
   </component>
 </project>

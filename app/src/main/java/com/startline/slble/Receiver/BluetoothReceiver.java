@@ -3,6 +3,7 @@ package com.startline.slble.Receiver;
 import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -27,6 +28,7 @@ import com.startline.slble.Util.LogUtil;
 public class BluetoothReceiver extends BroadcastReceiver
 {
     private final String TAG = "BluetoothReceiver";
+    private final String BLUETOOTH_INPUT_DEVICE_STATE_CHANGED = "android.bluetooth.input.profile.action.CONNECTION_STATE_CHANGED";
     private Handler mHandler = new Handler();
     private BluetoothLeIndependentService mService = null;
 
@@ -93,7 +95,8 @@ public class BluetoothReceiver extends BroadcastReceiver
                 break;
             }
         }
-        else
+        else if(action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)
+                || action.equals(BluetoothDevice.ACTION_ACL_DISCONNECTED))
         {
             final BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if(bluetoothDevice == null) return;
@@ -101,10 +104,18 @@ public class BluetoothReceiver extends BroadcastReceiver
             final String deviceName = bluetoothDevice.getName();
             if(deviceName == null) return;
 
-            if(deviceName.startsWith(BluetoothLeIndependentService.KEYWORD_SLBLE))
+            LogUtil.i(TAG, String.format("[ %s ] - %s %s",action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)?"Connect":"Disconnect",deviceName, bluetoothDevice.getAddress()), Thread.currentThread().getStackTrace());
+            //if(deviceName.startsWith(BluetoothLeIndependentService.KEYWORD_SLBLE))
             {
                 handleBluetoothAclEvent(context,intent.getAction(),bluetoothDevice);
             }
+        }
+        else if(action.equals(BLUETOOTH_INPUT_DEVICE_STATE_CHANGED))
+        {
+            final int prevState = intent.getIntExtra(BluetoothProfile.EXTRA_PREVIOUS_STATE,0);
+            final int newState = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, 0);
+            final BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            LogUtil.i(TAG,String.format("PrevState = %d, NewState = %d, Device : %s", prevState, newState, device==null?"NULL" : device.getAddress()), Thread.currentThread().getStackTrace());
         }
     }
 

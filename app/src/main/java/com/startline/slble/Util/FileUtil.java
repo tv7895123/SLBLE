@@ -1,56 +1,185 @@
 package com.startline.slble.Util;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import android.content.Context;
+import android.util.Log;
+
+import java.io.*;
 
 /**
- * Created by terry on 2015/7/6.
+ * Created by terry on 2016/1/20.
  */
 public class FileUtil
 {
-	public static File createFile(final String path,final String fileName)
-	{
-		try
-		{
-			final File logDir = new File(path);
-			final File file = new File (path, fileName);
+    private static final String TAG = FileUtil.class.getSimpleName();
 
-			if(logDir.exists() == false)
-				logDir.mkdirs();
+    public static void writeToFile(final Context context, final String strFileName, final Object srcObject)
+    {
+        if(null == strFileName)
+            throw new RuntimeException("FileName is null!");
 
-			if(file.exists() == false)
-				file.createNewFile();
+        final File file = context.getFileStreamPath(strFileName);
+        final String strPath = file.getParent();
 
-			return file;
-		}
-		catch (Exception e)
-		{
+        writeToFile(context,strPath,strFileName,srcObject);
+    }
 
-		}
-		return null;
-	}
+    public static void writeToFile(final Context context, final String strPath, final String strFileName, final Object srcObject)
+    {
+        if(null == strFileName)
+            throw new RuntimeException("FileName is null!");
 
-	public static void appendFile(final File file,final String message)
-	{
-		try
-		{
-			final FileWriter fileWriter = new FileWriter(file.getAbsolutePath(),true);
-			final BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+        final File filePath = new File(strPath);
+        try
+        {
+            if(!filePath.exists())
+            {
+                filePath.mkdirs();
+            }
 
-			final Date date = new Date();
-			final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("hh:mm:ss.sss", Locale.ENGLISH);
-			final String time = simpleDateFormat.format(date);
+            final File file = new File(strPath,strFileName);
 
-			bufferedWriter.write(String.format("[%s]: %s",time,message));
-			bufferedWriter.close();
-		}
-		catch (Exception e)
-		{
+            if(file.exists() || file.createNewFile())
+            {
+                final FileOutputStream fos = context.openFileOutput(strFileName, Context.MODE_PRIVATE);
+                final ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(srcObject);
+                fos.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 
-		}
-	}
+
+
+    public static Object loadFromFile(final Context context, final String strFileName)
+    {
+        if(strFileName == null)
+            return null;
+
+        final File file = context.getFileStreamPath(strFileName);
+        final String strPath = file.getParent();
+
+        return loadFromFile(context,strPath,strFileName);
+    }
+
+    public static Object loadFromFile(final Context context, final String strPath, final String strFileName)
+    {
+        if(strFileName == null)
+            return null;
+
+        final File filePath = new File(strPath);
+        Object object = null;
+        try
+        {
+            if(!filePath.exists())
+            {
+                filePath.mkdirs();
+            }
+
+            final File file = new File(strPath,strFileName);
+
+            if(file.exists())
+            {
+                final FileInputStream fis = context.openFileInput(strFileName);
+                final ObjectInputStream ois = new ObjectInputStream(fis);
+                object = ois.readObject();
+                fis.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        return object;
+    }
+
+    public static String readFromFile(final Context context, final String strPath, final String strFileName)
+    {
+        String ret = "";
+
+        try
+        {
+            final File filePath = new File(strPath);
+            if(!filePath.exists())
+            {
+                filePath.mkdirs();
+            }
+
+            final File file = new File(strPath,strFileName);
+            if(!file.exists())
+            {
+                return null;
+            }
+
+
+            final FileInputStream fileInputStream = new FileInputStream(file);
+
+            if ( fileInputStream != null )
+            {
+                final InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+                final int size = fileInputStream.available();
+                final char[] buffer = new char[size];
+
+                inputStreamReader.read(buffer);
+                fileInputStream.close();
+                ret = new String(buffer);
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            Log.e(TAG, "File not found: " + e.toString());
+        }
+        catch (IOException e)
+        {
+            Log.e(TAG, "Can not read file: " + e.toString());
+        }
+
+        return ret;
+    }
+
+    public static void appendToFile(final Context context, final String strPath, final String strFileName, final String message)
+    {
+        if(null == strFileName)
+            throw new RuntimeException("FileName is null!");
+
+        final File filePath = new File(strPath);
+        try
+        {
+            if(!filePath.exists())
+            {
+                filePath.mkdirs();
+            }
+            final File file = new File(strPath,strFileName);
+
+            if(file.exists() || file.createNewFile())
+            {
+                //BufferedWriter for performance, true to set append to file flag
+                BufferedWriter buf = new BufferedWriter(new FileWriter(file, true));
+                buf.append(message);
+                buf.newLine();
+                buf.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public static void deleteFile(final File fileOrDirectory)
+    {
+        if (fileOrDirectory.isDirectory())
+        {
+            for (File child : fileOrDirectory.listFiles())
+            {
+                deleteFile(child);
+            }
+        }
+
+        fileOrDirectory.delete();
+    }
+
 }

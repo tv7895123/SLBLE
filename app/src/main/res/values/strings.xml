@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SLBLE</string>
+    <string name="app_auto_connect">ACT</string>
     <string name = "ble_not_supported">BLE not supported</string>
     <string name = "error_get_ble">Get BLE service error</string>
     <string name = "unknown_device">Unknown_device</string>
@@ -32,7 +33,7 @@
     <string name = "login_success">Login success</string>
 
     <string name="ok">Ok</string>
-	<string name="cancel">Cancel</string>
+    <string name="cancel">Cancel</string>
 
     <string name = "title_app_setting">APP Setting</string>
     <string name = "title_ble_setting">BLE Setting</string>
@@ -132,7 +133,7 @@
     <string name="degree_celsius">℃</string>
     <string name="voltage">V</string>
 
-	<string name="days">days</string>
-	<string name="hour">hour</string>
+    <string name="days">days</string>
+    <string name="hour">hour</string>
     <string name="minute">minute</string>
 </resources>

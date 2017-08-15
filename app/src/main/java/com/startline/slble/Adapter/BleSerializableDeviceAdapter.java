@@ -1,38 +1,46 @@
 package com.startline.slble.Adapter;
 
 import android.content.Context;
+import android.media.Image;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import com.startline.slble.PureClass.BleSerializableDevice;
 import com.startline.slble.R;
 
 import java.util.ArrayList;
 
+import static android.content.Context.LAYOUT_INFLATER_SERVICE;
+
 /**
  * Created by terry on 2015/3/31.
  */
- // Adapter for holding devices found through scanning.
+// Adapter for holding devices found through scanning.
 public class BleSerializableDeviceAdapter extends BaseAdapter
 {
 	public static final int DEVICE_TYPE_SCAN = 0;
 	public static final int DEVICE_TYPE_BOND = 1;
+	public static final int DEVICE_TYPE_AUTO_CONNECT = 2;
 
 	private ArrayList<BleSerializableDevice> mLeDevices;
 	private Context context;
 	private int deviceType = DEVICE_TYPE_SCAN;
 	private View.OnClickListener onClickListener = null;
+	private String mAutoConnectDeviceAddress = "";
 
 	class ViewHolder
 	{
-        TextView deviceName;
-        TextView deviceAddress;
+		ImageView imgCheck;
+		TextView deviceName;
+		TextView deviceAddress;
 		TextView deviceRssi;
 
 		Button btnUnbond;
-    }
+	}
 
 	public BleSerializableDeviceAdapter(final Context context)
 	{
@@ -60,6 +68,11 @@ public class BleSerializableDeviceAdapter extends BaseAdapter
 	public void setUnBondOnClickListener(final View.OnClickListener onClickListener)
 	{
 		this.onClickListener = onClickListener;
+	}
+
+	public void setAutoConnectDeviceAddress(final String address)
+	{
+		mAutoConnectDeviceAddress = address;
 	}
 
 
@@ -97,19 +110,23 @@ public class BleSerializableDeviceAdapter extends BaseAdapter
 	{
 		ViewHolder viewHolder;
 		// General ListView optimization code.
+
+		final LayoutInflater layoutInflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);;
 		if (view == null)
 		{
 			viewHolder = new ViewHolder();
 			if(deviceType == DEVICE_TYPE_SCAN)
 			{
-				view = View.inflate(context, R.layout.device_scanned, null);
+				//view = View.inflate(context, R.layout.device_scanned, null);
+				view = layoutInflater.inflate(R.layout.device_scanned, viewGroup,false);
 				viewHolder.deviceAddress = (TextView) view.findViewById(R.id.txt_address);
 				viewHolder.deviceName = (TextView) view.findViewById(R.id.txt_name);
 				viewHolder.deviceRssi = (TextView)view.findViewById(R.id.txt_rssi);
 			}
-			else
+			else if(deviceType == DEVICE_TYPE_BOND)
 			{
-				view = View.inflate(context, R.layout.device_bonded, null);
+				//view = View.inflate(context, R.layout.device_bonded, null);
+				view = layoutInflater.inflate(R.layout.device_bonded, viewGroup,false);
 				viewHolder.deviceAddress = (TextView) view.findViewById(R.id.txt_address);
 				viewHolder.deviceName = (TextView) view.findViewById(R.id.txt_name);
 				viewHolder.btnUnbond = (Button)view.findViewById(R.id.btn_unbond);
@@ -117,6 +134,14 @@ public class BleSerializableDeviceAdapter extends BaseAdapter
 				{
 					viewHolder.btnUnbond.setOnClickListener(onClickListener);
 				}
+			}
+			else
+			{
+				//view = View.inflate(context, R.layout.device_bonded_to_auto_connect, null);
+				view = layoutInflater.inflate(R.layout.device_bonded_to_auto_connect, viewGroup,false);
+				viewHolder.imgCheck = (ImageView)view.findViewById(R.id.img_check);
+				viewHolder.deviceAddress = (TextView) view.findViewById(R.id.txt_address);
+				viewHolder.deviceName = (TextView) view.findViewById(R.id.txt_name);
 			}
 
 			view.setTag(viewHolder);
@@ -140,9 +165,16 @@ public class BleSerializableDeviceAdapter extends BaseAdapter
 		{
 			viewHolder.deviceRssi.setText(simpleBleDevice.rssi + " dBm");
 		}
-		else
+		else if(deviceType == DEVICE_TYPE_BOND)
 		{
 			viewHolder.btnUnbond.setTag(simpleBleDevice.address);
+		}
+		else
+		{
+			if(mAutoConnectDeviceAddress == null || mAutoConnectDeviceAddress.isEmpty() || !simpleBleDevice.address.equals(mAutoConnectDeviceAddress))
+				viewHolder.imgCheck.setVisibility(View.INVISIBLE);
+			else
+				viewHolder.imgCheck.setVisibility(View.VISIBLE);
 		}
 
 		return view;
